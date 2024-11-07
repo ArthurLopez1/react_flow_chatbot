@@ -1,0 +1,132 @@
+:root {
+    /* modular scale */
+    --ratio: 1.4;
+    --s-5: calc(var(--s-4) / var(--ratio));
+    --s-4: calc(var(--s-3) / var(--ratio));
+    --s-3: calc(var(--s-2) / var(--ratio));
+    --s-2: calc(var(--s-1) / var(--ratio));
+    --s-1: calc(var(--s0) / var(--ratio));
+    --s0: 1rem;
+    --s1: calc(var(--s0) * var(--ratio));
+    --s2: calc(var(--s1) * var(--ratio));
+    --s3: calc(var(--s2) * var(--ratio));
+    --s4: calc(var(--s3) * var(--ratio));
+    --s5: calc(var(--s4) * var(--ratio));
+
+    --black: #0F0F14; 
+    --white: #FFFFFF; 
+    --beige: #A8A69A; 
+    --lightBeige: #F0F0F0; 
+    --blue: #055158;
+    --borderColor: #D1D5DB; 
+    --buttonColor: #0F0F14; 
+    --buttonHoverColor: #3E3C3C; 
+}
+
+body {
+    font-family: 'Sans-serif Fonts', Verdana;
+    color: var(--black);
+    background-color: var(--black);
+}
+
+/* General spacing */
+body *+* {
+    margin-top: var(--s-2);
+}
+
+/* Header styling */
+h1, h2 {
+    color: var(--black);
+    font-weight: normal;
+}
+
+h1 {
+    font-size: var(--s3);
+}
+
+h2 {
+    font-size: var(--s2);
+}
+
+h3, p {
+    font-family: "Roboto", Verdana;
+}
+
+p {
+    font-size: var(--s0);
+}
+
+h3 {
+    color: var(--black);
+    font-size: var(--s1);
+}
+
+/* Sidebar styling */
+.stSidebar {
+    background-color: var(--beige);
+}
+
+/* Buttons */
+button, .stButton button {
+    background-color: var(--buttonColor);
+    color: var(--black);
+    border: none;
+    padding: 0.5rem 1rem;
+    font-size: var(--s1);
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+button:hover, .stButton button:hover {
+    background-color: var(--buttonHoverColor);
+}
+
+/* Input field styling */
+.stTextInput, .stNumberInput, .stTextArea { 
+    background-color: var(--inputBackgroundColor);
+    color: var(--textColor);
+    border: 1px solid var(--lightBeige);
+    padding: 0.5rem;
+    border-radius: 5px;
+}
+
+/*[data-testid|="stHeader"] {
+    display: none;
+  }*/
+
+/* Targeting Streamlit elements */
+[data-testid="stMarkdownContainer"] {
+    color: var(--white) !important;
+}
+
+[data-testid="stTextInput"] label {
+    color: var(--black) !important;
+}
+
+[data-testid="stNumberInput"] label {
+    color: var(--black) !important;
+}
+
+[data-testid="question-label"],
+[data-testid="max-retries-label"] {
+    color: var(--black) !important;
+}
+
+[data-testid="stAlertContainer"] {
+    background-color: var(--blue) !important;
+}
+
+[data-testid="stExceptionTraceRow"],
+[data-testid="stExceptionMessage"],
+[data-testid="stAlertContentError"] {
+    color: var(--white) !important;
+}
+
+/* Custom styling for generated answer */
+.generated-answer {
+    color: var(--black) !important;
+    background-color: var(--lightBeige) !important;
+    padding: var(--s-1);
+    border-radius: 5px;
+    margin-top: var(--s-2);
+}
