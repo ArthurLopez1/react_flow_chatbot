@@ -6,6 +6,13 @@ from langchain_core.messages import HumanMessage
 from langgraph.graph import StateGraph, END
 from .vectorstore import VectorStoreManager
 from .llm_models import LLM
+import json
+import re
+import uuid
+from langchain.schema import Document
+from langchain_cohere.rerank import CohereRerank
+from langchain_core.output_parsers import StrOutputParser, PydanticToolsParser
+from pydantic import BaseModel, Field
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -18,15 +25,15 @@ class SimpleGraphState(TypedDict):
     """Graph state containing information for each graph node."""
     question: str
     intent: str
+    answers: List[str]
     question_list: List[str]
     generation: str
     documents: List[str]
 
-intent_prompt = """You are an AI assistant tasked with detecting the intent of an incoming message. Your goal is to categorize the message into one of three intents: greeting, specific_question, or metadata_query.
+intent_prompt = """You are an AI assistant tasked with detecting the intent of an incoming message. Your goal is to categorize the message into one of two intents: greeting or metadata_query.
 Here are the definitions for each intent:
 1. Greeting: A simple salutation or farewell, such as "Hello," "Hi," "Good morning," "Goodbye," or "See you later."
-2. Specific_question: A specific inquiry about a subject asked by the user. This could be any question that doesn't fall under the metadata_query category.
-3. Metadata_query: Any request involving a count, sort, or retrieval of specific subsets of data. This includes questions about the latest documents, counting items, or sorting results.
+2. Metadata_query: Any request involving a count, sort, or retrieval of specific subsets of data. This includes questions about the latest documents, counting items, or sorting results.
 
 <chat_history>
 {chat_history}
@@ -39,8 +46,7 @@ Here are the definitions for each intent:
 Carefully read and analyze the message to determine its intent based on the definitions provided above.
 Guidelines for categorization:
 - If the message is a simple greeting or farewell, classify it as "greeting"
-- If the message asks for information about counts, sorting, or retrieving specific subsets of data, classify it as "metadata_query"
-- For questions that require extra info or cannot be answer based on the existing chat history, classify it as "specific_question"
+- If the message asks for information about documents, regulations, or retrieving specific subsets of data, classify it as "metadata_query"
 After analyzing the message, provide your reasoning for the classification in <reasoning> tags."""
 
 def detect_intent(state: Dict[str, Any]):
