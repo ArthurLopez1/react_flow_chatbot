@@ -16,4 +16,5 @@ langgraph
 Ipython
 ipykernel
 langchain-huggingface
-sentence_transformers
+sentence-transformers
+langchain-cohere

@@ -50,6 +50,7 @@ class VectorStoreManager:
     def retrieve_documents(self, query: str, top_k: int = 5) -> List[Tuple[str, float]]:
         """
         Retrieve the top_k most similar documents for a given query.
+        Returns a list of tuples (document content, similarity score).
         """
         query_embedding = self.embed_text(query)
         query_embedding = query_embedding.reshape(1, -1)  # Ensure query_embedding is a 2D array

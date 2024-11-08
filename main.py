@@ -24,7 +24,7 @@ def main():
 
     # Define initial state and configuration
     state = {
-        "question": "Hi?",
+        "question": "Hi!",
         "max_retries": 2
     }
     config = Config()  # Ensure config is initialized correctly
