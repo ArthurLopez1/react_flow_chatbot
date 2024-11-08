@@ -32,7 +32,7 @@ def parse_pdf_with_pypdf(pdf_path: str):
 
     return documents
 
-def split_document(document: Document, chunk_size: int = 1500, chunk_overlap: int = 300):
+def split_document(document: Document, chunk_size: int = 2500, chunk_overlap: int = 300):
     """
     Split a document into chunks for processing, using LangChain's RecursiveCharacterTextSplitter.
     """

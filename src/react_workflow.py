@@ -17,8 +17,73 @@ llm = LLM()
 class SimpleGraphState(TypedDict):
     """Graph state containing information for each graph node."""
     question: str
+    intent: str
+    question_list: List[str]
     generation: str
     documents: List[str]
+
+intent_prompt = """You are an AI assistant tasked with detecting the intent of an incoming message. Your goal is to categorize the message into one of three intents: greeting, specific_question, or metadata_query.
+Here are the definitions for each intent:
+1. Greeting: A simple salutation or farewell, such as "Hello," "Hi," "Good morning," "Goodbye," or "See you later."
+2. Specific_question: A specific inquiry about a subject asked by the user. This could be any question that doesn't fall under the metadata_query category.
+3. Metadata_query: Any request involving a count, sort, or retrieval of specific subsets of data. This includes questions about the latest documents, counting items, or sorting results.
+
+<chat_history>
+{chat_history}
+<chat_history>
+
+<question>
+{question}
+</question>
+
+Carefully read and analyze the message to determine its intent based on the definitions provided above.
+Guidelines for categorization:
+- If the message is a simple greeting or farewell, classify it as "greeting"
+- If the message asks for information about counts, sorting, or retrieving specific subsets of data, classify it as "metadata_query"
+- For questions that require extra info or cannot be answer based on the existing chat history, classify it as "specific_question"
+After analyzing the message, provide your reasoning for the classification in <reasoning> tags."""
+
+def detect_intent(state: Dict[str, Any]):
+    """
+    Detect the intent of the user's input using the provided intent_prompt.
+
+    Args:
+        state (dict): The current graph state
+
+    Returns:
+        state (dict): Updates 'intent' in the state
+    """
+    print("---DETECT INTENT---")
+    question = state["question"]
+    chat_history = state.get("chat_history", "")
+
+    # Use LLM to classify intent
+    prompt = intent_prompt.format(chat_history=chat_history, question=question)
+    intent_response = llm.invoke([HumanMessage(content=prompt)]).content.strip().lower()
+    state["intent"] = intent_response
+    print(f"Detected intent: {intent_response}")
+    return state
+
+def split_questions(state: Dict[str, Any]):
+    """
+    Split the user's input into multiple questions if necessary.
+
+    Args:
+        state (dict): The current graph state
+
+    Returns:
+        state (dict): Updates 'question_list' in the state
+    """
+    print("---SPLIT QUESTIONS---")
+    question = state["question"]
+
+    # Use LLM to split questions
+    prompt = f"Split the following input into individual questions:\n\n{question}\n\nQuestions:"
+    split_response = llm.invoke([HumanMessage(content=prompt)]).content.strip()
+    questions = split_response.split('\n')
+    state["question_list"] = questions
+    print(f"Split questions: {questions}")
+    return state
 
 # Nodes
 def retrieve_documents(state: Dict[str, Any]):
@@ -67,11 +132,15 @@ def initialize_simple_graph():
     workflow = StateGraph(SimpleGraphState)
 
     # Add nodes
+    workflow.add_node("detect_intent", detect_intent)  # detect intent
+    workflow.add_node("split_questions", split_questions)  # split questions
     workflow.add_node("retrieve_documents", retrieve_documents)  # retrieve documents
     workflow.add_node("generate_answer", generate_answer)  # generate answer
 
     # Build graph
-    workflow.set_entry_point("retrieve_documents")
+    workflow.set_entry_point("detect_intent")
+    workflow.add_edge("detect_intent", "split_questions")
+    workflow.add_edge("split_questions", "retrieve_documents")
     workflow.add_edge("retrieve_documents", "generate_answer")
     workflow.add_edge("generate_answer", END)
 

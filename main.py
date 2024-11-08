@@ -1,11 +1,14 @@
 import os
 import logging
-from venv import logger
 from src.llm_models import LLM
 from src.vectorstore import VectorStoreManager
-from src.components import run_workflow, initialize_graph
 from src.training import train_on_document
 from settings import Config
+from src.react_workflow import run_simple_workflow
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 def main():
     # Train with a sample document
@@ -21,13 +24,13 @@ def main():
 
     # Define initial state and configuration
     state = {
-        "question": "Hur ofta analyseras väderdata i VädErs-modellen?",
+        "question": "Hi?",
         "max_retries": 2
     }
     config = Config()  # Ensure config is initialized correctly
 
-    # Run the workflow
-    events = run_workflow(state, config)
+    # Run the simple workflow with intent detection and question splitting
+    events = run_simple_workflow(state)
 
     # Output the final generated answer
     final_state = events[-1] if events else {}

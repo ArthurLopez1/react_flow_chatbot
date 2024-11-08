@@ -1,7 +1,5 @@
-# src/training.py
-
-from src.file_handler import load_document, split_document
-from src.vectorstore import VectorStoreManager
+from .file_handler import load_document, split_document
+from .vectorstore import VectorStoreManager
 
 def train_on_document(file_path):
     # Load documents
