@@ -32,3 +32,9 @@ class Config:
         for var in required_vars:
             if getattr(self, var) is None:
                 raise EnvironmentError(f"Missing required environment variable: {var}")
+
+# Example usage
+if __name__ == "__main__":
+    config = Config()
+    print(f"TAVILY_API_KEY: {config.TAVILY_API_KEY}")
+    print(f"LANGCHAIN_API_KEY: {config.LANGCHAIN_API_KEY}")
