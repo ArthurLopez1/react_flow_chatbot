@@ -32,12 +32,24 @@ class VectorStoreManager:
         embedding = self.embedding_model.embed_documents([text])[0]
         return np.array(embedding).astype("float32")
 
-    def add_documents(self, documents: List[str]):
+    def add_documents(self, documents: List[Document]):
         """
         Embed and add multiple documents to the FAISS index.
         """
-        embeddings = [self.embed_text(doc) for doc in documents]
-        embeddings_array = np.vstack(embeddings)  # Ensure embeddings_array is a 2D array
+        if not documents:
+            print("No documents to add. Skipping.")
+            return
+        
+        embeddings = [self.embed_text(doc.page_content) for doc in documents]
+        if not embeddings:
+            print("No embeddings generated. Skipping.")
+            return
+        
+        try:
+            embeddings_array = np.vstack(embeddings)  # Ensure embeddings_array is a 2D array
+        except ValueError as e:
+            print(f"Error stacking embeddings: {e}")
+            return
         
         # Add to FAISS index
         self.index.add(embeddings_array)
@@ -45,7 +57,10 @@ class VectorStoreManager:
         # Map indices to documents
         start_idx = len(self.doc_mapping)
         for i, doc in enumerate(documents):
-            self.doc_mapping[start_idx + i] = doc
+            self.doc_mapping[start_idx + i] = {
+                "page_content": doc.page_content,
+                "metadata": doc.metadata
+            }
         
         print(f"Added {len(documents)} documents to the vector store.")
         self._save_index()
@@ -84,7 +99,14 @@ class VectorStoreManager:
         distances, indices = self.index.search(query_embedding, top_k)
 
         # Fetch documents from mapping and create Document objects
-        results = [Document(page_content=self.doc_mapping[idx], metadata={"relevance_score": float(distances[0][i])}) for i, idx in enumerate(indices[0]) if idx in self.doc_mapping]
+        results = []
+        for i, idx in enumerate(indices[0]):
+            if idx in self.doc_mapping:
+                doc_info = self.doc_mapping[idx]
+                results.append(Document(
+                    page_content=doc_info["page_content"],
+                    metadata=doc_info["metadata"]
+                ))
         print(f"Retrieved {len(results)} documents for query: '{query}'")
         return results
 
@@ -98,13 +120,6 @@ class VectorStoreManager:
         except Exception as e:
             print(f"Error saving FAISS index to disk: {e}")
             raise
-
-    def _save_index(self):
-        """
-        Persist the FAISS index to disk.
-        """
-        faiss.write_index(self.index, self.vector_store_path)
-        print("Vector store saved to disk.")
 
     def _load_index(self):
         """

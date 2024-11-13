@@ -3,7 +3,7 @@ import logging
 import faulthandler  # New import
 from src.llm_models import LLM
 from src.vectorstore import VectorStoreManager
-from src.training import train_on_document
+from src.training import train_on_documents  # Changed import
 from settings import Config
 from src.react_workflow import run_simple_workflow
 
@@ -17,9 +17,9 @@ logger = logging.getLogger(__name__)
 def main():
     try:
         # Force retraining by deleting vector store files
-        pdf_path = "data/ersattningsmodell_vaders_2019.pdf"
-        logger.info(f"Training on document: {pdf_path}")
-        train_on_document(pdf_path)
+        data_folder = "data"  # Define the data folder
+        logger.info(f"Training on documents in folder: {data_folder}")
+        train_on_documents(data_folder)  # Updated function call
         logger.info("Training completed successfully.")
 
         # Initialize the vector store for querying
@@ -41,7 +41,7 @@ def main():
             },
             "max_retries": 2
         }
-        config = Config()  # Ensure config is initialized correctly
+        config = Config()  
         logger.info("Configuration initialized.")
 
         # Run the simple workflow with intent detection and question splitting

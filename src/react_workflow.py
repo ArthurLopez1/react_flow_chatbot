@@ -95,7 +95,7 @@ def transform_documents(state: Dict[str, Any]):
     print(f"Number of documents after filtering: {len(unique_documents)}")  # New debugging print
     return state
 
-rag_prompt = """You are fluent in Swedish and English. You are tasked with answering a question based on the sources (retrieved documents). Your goal is to provide a well-researched answer with proper citations.
+rag_prompt = """You are tasked with answering a question based on the sources. Your goal is to provide a well-researched answer with proper citations. Answer in the same language as the question.
 
 You will be given two inputs:
 
@@ -109,18 +109,18 @@ You will be given two inputs:
 
 Follow these steps to complete the task:
 
-1. Carefully read and analyze all the provided sources (retrieved documents).
+1. Carefully read and analyze all the provided sources.
 
-2. Identify information from the sources that is relevant to answering the question. Do not ask for more sources
+2. Identify information from the sources that is relevant to answering the question.
 
-3. **Formulate a comprehensive answer to the question using the information from the provided sources. Write your answer exclusively in the same language as the question.**
+3. **Formulate a comprehensive answer to the question using the information from the provided sources. Write your answer exclusively in the same language as the question.
 
 4. As you write your answer, include citations for each piece of information you use from the sources. Use superscript numbers for citations, linking to the corresponding reference at the bottom of the document.
 
 5. Format your answer as markdown, following this structure:
 
    - Main content with your answer in the language of the question.
-
+   
    - A "References" section at the end
 
 6. For each citation, create a corresponding reference entry in the "References" section. Number the references in the order they appear in the text.
@@ -128,8 +128,8 @@ Follow these steps to complete the task:
 7. Use the following format for citations and references:
 
    - In-text citation: Use superscript like "¹" to refer to a reference
-
-   - Reference entry: Quote the sentence you used to give the answer.
+   
+   - Reference entry: Include the sentence and the exact page number from the source.
 
 8. Ensure that all citations in the text have a corresponding reference entry, and vice versa.
 
@@ -137,7 +137,8 @@ Follow these steps to complete the task:
 
 Always return the answer in a structured message within the "answer" key!
 
-Remember to use the information provided in the sources to answer the question. Ensure that your answer is comprehensive, well-structured, and properly cited. **Always answer in the same language as the question.**"""
+Remember to use the information provided in the sources to answer the question. Ensure that your answer is comprehensive, well-structured, and properly cited. **Always answer in the same language as the question.**
+"""
 
 def _rag_answer_chain():
     # Define system and human messages

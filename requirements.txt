@@ -19,3 +19,6 @@ transformers
 PyPDF2
 faiss-cpu
 torch
+pytesseract
+pdf2image
+opencv-python

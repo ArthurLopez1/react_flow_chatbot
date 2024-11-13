@@ -1,6 +1,6 @@
 import os
 from dotenv import load_dotenv  # Add this import
-from langchain_ollama import ChatOllama
+from langchain_community.chat_models import ChatOllama
 from langchain_experimental.llms.ollama_functions import OllamaFunctions
 import logging
 
@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()  
 
-MODEL_NAME = os.getenv("LLM_MODEL_NAME", "llama3-groq-tool-use:8b")  
+MODEL_NAME = os.getenv("LLM_MODEL_NAME", "llama3.2:3b-instruct-fp16 ")  
 TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", 0))
 FORMAT = os.getenv("LLM_FORMAT", None)
 
