@@ -1,7 +1,7 @@
+import os
 from pathlib import Path
 import logging  # Updated import for logger
 import streamlit as st
-from src.components import run_workflow
 from src.vectorstore import VectorStoreManager
 from src.training import train_on_document
 from settings import Config
@@ -55,7 +55,6 @@ if st.button("Get Answer"):
     final_state = events[-1] if events else {}
     generated_answer = final_state.get("generation", "No answer generated.")
     
-    # Display the formatted answer or error message
     if "Error generating answer." in generated_answer:
         st.error(generated_answer)
     else:

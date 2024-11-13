@@ -100,15 +100,11 @@ rag_prompt = """You are fluent in Swedish and English. You are tasked with answe
 You will be given two inputs:
 
 <sources>
-
 {SOURCES}
-
 </sources>
 
 <question>
-
 {QUESTION}
-
 </question>
 
 Follow these steps to complete the task:
