@@ -1,13 +1,12 @@
 from pathlib import Path
-from venv import logger
+import logging  # Updated import for logger
 import streamlit as st
 from src.components import run_workflow
 from src.vectorstore import VectorStoreManager
 from src.training import train_on_document
 from settings import Config
 from src.llm_models import LLM
-from react_workflow import run_simple_workflow  
-
+from src.react_workflow import run_simple_workflow  
 # Initialize the configuration
 config = Config()
 
@@ -41,30 +40,42 @@ if st.sidebar.button("Train Model"):
 st.header("Ask a question about the document:")
 st.markdown('<div data-testid="question-label">Enter your question here:</div>', unsafe_allow_html=True)
 question = st.text_input("Question", key="question_input", label_visibility="collapsed")
-st.markdown('<div data-testid="max-retries-label">Max Retries</div>', unsafe_allow_html=True)
-max_retries = st.number_input("Max Retries", min_value=1, max_value=10, value=3, key="max_retries_input", label_visibility="collapsed")
 
 if st.button("Get Answer"):
     # Define initial state and configuration
     state = {
         "question": question,
-        "max_retries": max_retries
+        "messages": [  # Add messages to mimic chat history
+            {"content": question}  # Example message structure
+        ]
     }
 
-
-    # simple workflow
+    # Run the simple workflow
     events = run_simple_workflow(state)
     final_state = events[-1] if events else {}
     generated_answer = final_state.get("generation", "No answer generated.")
-    st.markdown(f'<div class="generated-answer">{generated_answer}</div>', unsafe_allow_html=True)
-    logger.info(f"Final state: {final_state}")
+    
+    # Display the formatted answer or error message
+    if "Error generating answer." in generated_answer:
+        st.error(generated_answer)
+    else:
+        st.markdown(f'<div class="generated-answer">{generated_answer}</div>', unsafe_allow_html=True)
+    
+    logging.info(f"Final state: {final_state}")  # Ensure correct logger is used
     print(f"Final state: {final_state}")  # Ensure final state is printed to console
 
-    # main workflow
-    # events = run_workflow(state, config)
-    # final_state = events[-1] if events else {}
-    # generated_answer = final_state.get("generation", "No answer generated.")
-    # st.write("Final Generated Answer:")
-    # st.write(generated_answer)
-    # logger.info(f"Final state: {final_state}")
-    # print(f"Final state: {final_state}")  # Ensure final state is printed to console
+if __name__ == "__main__":
+    # Define initial state
+    state = {
+        "question": "Hur ofta analyseras väderdata i VädErs-modellen?"
+    }
+
+    # Run the simple workflow
+    events = run_simple_workflow(state)
+
+    # Output the final generated answer
+    final_state = events[-1] if events else {}
+    generated_answer = final_state.get("generation", "No answer generated.")
+    print("Final Generated Answer:")
+    print(generated_answer)
+    logging.info(f"Final state: {final_state}")

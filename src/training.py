@@ -1,3 +1,4 @@
+import os  
 from .file_handler import load_document, split_document
 from .vectorstore import VectorStoreManager
 

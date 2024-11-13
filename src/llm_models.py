@@ -1,13 +1,16 @@
 import os
+from dotenv import load_dotenv  # Add this import
 from langchain_ollama import ChatOllama
+from langchain_experimental.llms.ollama_functions import OllamaFunctions
 import logging
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# Load model configuration from environment variables or use default values
-MODEL_NAME = os.getenv("LLM_MODEL_NAME", "llama3.2:3b-instruct-fp16")
+load_dotenv()  
+
+MODEL_NAME = os.getenv("LLM_MODEL_NAME", "llama3-groq-tool-use:8b")  
 TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", 0))
 FORMAT = os.getenv("LLM_FORMAT", None)
 
@@ -35,8 +38,13 @@ class LLM:
                 self.llm = ChatOllama(model=MODEL_NAME, temperature=TEMPERATURE)
             logger.info(f"Initialized LLM with model: {MODEL_NAME}, temperature: {TEMPERATURE}, format: {format}")
         except Exception as e:
-            logger.error(f"Failed to initialize LLM: {e}")
+            logger.error(f"Failed to initialize LLM: {e}", exc_info=True)
             raise
 
     def invoke(self, messages):
-        return self.llm.invoke(messages)
+        try:
+            response = self.llm.invoke(messages)
+            return response
+        except Exception as e:
+            logger.error(f"LLM invocation failed: {e}", exc_info=True)
+            raise

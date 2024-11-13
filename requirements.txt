@@ -1,4 +1,4 @@
-langchain
+# langchain==0.0.148
 langchain-community
 llama-parse
 langchain-nomic
@@ -6,15 +6,16 @@ langchain-ollama
 scikit-learn
 streamlit
 ollama
-langchain-core
-langchain_text_splitters
-transformers
-PyPDF2
-faiss-cpu
-torch
 langgraph
 Ipython
 ipykernel
 langchain-huggingface
 sentence-transformers
 langchain-cohere
+tensorflow
+langchain_core
+langchain_text_splitters
+transformers
+PyPDF2
+faiss-cpu
+torch

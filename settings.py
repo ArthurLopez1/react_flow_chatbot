@@ -23,6 +23,11 @@ class Config:
         os.environ["LANGCHAIN_TRACING_V2"] = "true"
         os.environ["LANGCHAIN_PROJECT"] = "local_rag_prototype"
         
+        # Ensure environment variables are set for local model usage
+        self.LLM_MODEL_NAME = os.getenv("LLM_MODEL_NAME", "llama3.2:3b-instruct-fp16")  # Ensure this model is available locally
+        self.TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", 0))
+        self.FORMAT = os.getenv("LLM_FORMAT", None)
+        
         # Check for missing environment variables
         self._check_env_vars()
 

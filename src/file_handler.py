@@ -15,6 +15,9 @@ def clean_text(text: str) -> str:
     # Replace multiple spaces with a single space
     text = re.sub(r'\s{2,}', ' ', text)
 
+    if not text:
+        raise ValueError("Cleaned text is empty.")
+
     return text
 
 def parse_pdf_with_pypdf(pdf_path: str):
@@ -27,17 +30,18 @@ def parse_pdf_with_pypdf(pdf_path: str):
     for page_num, page in enumerate(reader.pages):
         text = page.extract_text()
         if text:
-            cleaned_text = clean_text(text)  # Clean the text immediately after extraction
+            cleaned_text = clean_text(text)  
             documents.append(Document(page_content=cleaned_text, metadata={"page_number": page_num + 1}))
 
     return documents
 
-def split_document(document: Document, chunk_size: int = 2500, chunk_overlap: int = 300):
+def split_document(document: Document, chunk_size: int = 1500, chunk_overlap: int = 300):
     """
     Split a document into chunks for processing, using LangChain's RecursiveCharacterTextSplitter.
     """
     text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
-    return text_splitter.split_documents([document])
+    chunks = text_splitter.split_documents([document])
+    return chunks
 
 def load_document(file_path: str):
     """
@@ -48,7 +52,7 @@ def load_document(file_path: str):
     else:
         raise ValueError("Unsupported file format. Only PDF files are supported.")
 
-# Example usage
+
 if __name__ == "__main__":
     pdf_path = "./data/ersattningsmodell_vaders_2019.pdf"
     docs_list = parse_pdf_with_pypdf(pdf_path)
