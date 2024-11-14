@@ -21,19 +21,12 @@ def train_on_documents(data_folder):
                 documents = load_document(file_path)
                 logger.info(f"Loaded {len(documents)} documents from {file_path}.")
 
-                # Split each document into chunks
-                document_chunks = []
-                for document in documents:
-                    chunks = split_document(document)
-                    document_chunks.extend(chunks)
-                    logger.info(f"Split document into {len(chunks)} chunks.")
-
-                # Check if there are any document chunks
-                if document_chunks:
-                    # Embed and add all document chunks at once to the vector store
-                    vector_store.add_documents(document_chunks)  # Updated function call
+                # Check if there are any documents
+                if documents:
+                    # Add all documents to the vector store
+                    vector_store.add_documents(documents)
                 else:
-                    logger.warning(f"No document chunks found for {file_path}. Skipping.")
+                    logger.warning(f"No documents extracted from {file_path}. Skipping.")
 
             except Exception as e:
                 logger.error(f"Failed to process {file_path}: {e}", exc_info=True)

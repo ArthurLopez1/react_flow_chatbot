@@ -20,7 +20,7 @@ from langchain.prompts.chat import (
     SystemMessagePromptTemplate,
     HumanMessagePromptTemplate,
 )
-from sklearn.metrics.pairwise import cosine_similarity  # Add this import
+from sklearn.metrics.pairwise import cosine_similarity  
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -258,10 +258,10 @@ def cite_sources(state: Dict[str, Any]):
     question = state["question"]
     sources = ""
     for i, doc in enumerate(state["documents"], 1):
-        source = doc.metadata.get('source', 'Unknown')
-        url = doc.metadata.get('url', 'No URL provided')
-        document_name = doc.metadata.get('document_name', 'Unknown Document')  # Retrieve document name
-        sources += f"{i}. {doc.page_content}\n\nURL: {url}\nSource: {source}\nReferens: {document_name}\n"
+        document_name = doc.metadata.get('document_name', 'Unknown Document')  # Original PDF title
+        page_number = doc.metadata.get('page_number', 'Unknown Page')
+        sources += f"{i}. {document_name} (Page {page_number})\n"
+    
     cite_sources_chain = _setup_cite_sources_chain()
     response = cite_sources_chain.invoke({"SOURCES": sources, "QUESTION": question})
     state["cited_sources"] = response

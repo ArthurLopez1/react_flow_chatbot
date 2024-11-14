@@ -1,16 +1,16 @@
 import os
 import logging
-import faulthandler  # New import
+import faulthandler
 from src.llm_models import LLM
 from src.vectorstore import VectorStoreManager
-from src.training import train_on_documents  # Changed import
+from src.training import train_on_documents  
 from settings import Config
 from src.react_workflow import run_simple_workflow
 
-# Enable faulthandler at the very beginning
+
 faulthandler.enable()
 
-# Configure logging
+# logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
