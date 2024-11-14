@@ -272,7 +272,6 @@ def initialize_simple_graph():
     workflow = StateGraph(SimpleGraphState)
     
     # Add nodes
-    # Removed "__start__" node as it is reserved
     workflow.add_node("retrieve_documents", retrieve_documents)
     workflow.add_node("transform_documents", transform_documents)
     workflow.add_node("rag_answer", rag_answer)
@@ -280,7 +279,6 @@ def initialize_simple_graph():
 
     # Build graph
     workflow.set_entry_point("retrieve_documents")  # Set "retrieve_documents" as entry point
-    # Removed edge from "__start__" to "retrieve_documents"
     workflow.add_edge("retrieve_documents", "transform_documents")
     workflow.add_edge("transform_documents", "rag_answer")
     workflow.add_edge("rag_answer", "cite_sources")
