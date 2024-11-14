@@ -37,7 +37,7 @@ def clean_text(text: str) -> str:
 
 def parse_pdf_with_pymupdf(pdf_path: str) -> List[Document]:
     """
-    Extracts embedded text from a PDF using PyMuPDF and converts each page to a LangChain Document.
+    Extracts embedded text from a PDF using PyMuPDF and identifies tables.
     
     Args:
         pdf_path (str): Path to the PDF file.
@@ -70,6 +70,20 @@ def parse_pdf_with_pymupdf(pdf_path: str) -> List[Document]:
                 logger.info(f"Extracted and cleaned text from page {page_num + 1} using PyMuPDF.")
             else:
                 logger.warning(f"No embedded text found on page {page_num + 1}. Skipping.")
+            
+            # Check for tables on the page
+            tables = page.get_text("dict")["blocks"]
+            for block in tables:
+                if block["type"] == 0 and "lines" in block:
+                    table_text = "\n".join([" ".join(line["spans"][0]["text"] for line in block["lines"] if "spans" in line) for block in tables if block["type"] == 0])
+                    documents.append(Document(
+                        page_content=table_text,
+                        metadata={
+                            "page_number": page_num + 1,
+                            "source": "table"
+                        }
+                    ))
+                    logger.info(f"Extracted table from page {page_num + 1} using PyMuPDF.")
         except Exception as e:
             logger.error(f"Error extracting text from page {page_num + 1} in {pdf_path}: {e}")
 
@@ -183,15 +197,17 @@ def load_all_content(pdf_path: str) -> List[Document]:
     logger.info(f"Total combined documents after deduplication: {len(all_documents)}")
     return all_documents
 
-def load_document(file_path: str):
+def load_document(file_path: str) -> List[Document]:
     """
-    Load a document from a file path. Supports PDF files with text, tables, and captions extraction.
+    Load a document from a file path. Supports PDF files with text and tables extraction.
     """
+    documents = []
+
     if file_path.lower().endswith('.pdf'):
-        logger.info(f"Loading document with comprehensive extraction: {file_path}")
-        return load_all_content(file_path)
-    else:
-        raise ValueError("Unsupported file format. Only PDF files are supported.")
+        documents.extend(parse_pdf_with_pymupdf(file_path))
+        documents.extend(parse_tables(file_path))
+
+    return documents
 
 def test_load_and_print_document(file_path: str):
     """
@@ -210,31 +226,11 @@ def test_load_and_print_document(file_path: str):
             print(f"Metadata: {doc.metadata}")
             print(f"Content:\n{doc.page_content}\n")
 
-def test_parse_pdf_with_pymupdf(file_path: str):
-    """
-    Test function to load and print documents extracted using parse_pdf_with_pypdf.
-    """
-    documents = parse_pdf_with_pymupdf(file_path)
-    for doc in documents:
-        cleaned_content = clean_text(doc.page_content)
-        print(f"Metadata: {doc.metadata}")
-        print(f"Content:\n{cleaned_content}\n")
-
-def test_parse_tables(file_path: str):
-    """
-    Test function to load and print documents extracted using parse_tables.
-    """
-    documents = parse_tables(file_path)
-    for doc in documents:
-        print(f"Metadata: {doc.metadata}")
-        print(f"Content:\n{doc.page_content}\n")
-
 if __name__ == "__main__":
-    pdf_path = "data/ersattningsmodell_vaders_2019.pdf"
+    pdf_path = "./data/ersattningsmodell_vaders_2019.pdf"
+    
+    print("Testing parse_pdf_with_pymupdf:")
     test_load_and_print_document(pdf_path)
-
-    #print("Testing parse_pdf_with_pypdf:")
-    #test_parse_pdf_with_pymupdf(pdf_path)
     
     #print("\nTesting parse_tables:")
-    #test_parse_tables(pdf_path)
+    #test_load_and_print_document(pdf_path)
