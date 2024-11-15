@@ -37,9 +37,8 @@ def main():
         state = {
             "question": "Vilka två system används för att samla in väderdata i VädErs-modellen?",
             "config": {
-                "top_k": 10  # Set top_k to match the value in vectorstore.py
+                "top_k": 5  # Set top_k to match the value in vectorstore.py
             },
-            "max_retries": 2
         }
         config = Config()  
         logger.info("Configuration initialized.")

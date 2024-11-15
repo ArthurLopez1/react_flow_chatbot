@@ -4,15 +4,12 @@ import urllib.request
 # Disable SSL verification
 ssl._create_default_https_context = ssl._create_unverified_context
 
-
 import logging
 import re
 from langchain.schema import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from pdf2image import convert_from_path
 from typing import List
 from docling.document_converter import DocumentConverter
-
 
 logger = logging.getLogger(__name__)
 
@@ -40,15 +37,49 @@ def clean_text(text: str) -> str:
     
     return text
 
+def split_document(document: Document, chunk_size: int = 1000, chunk_overlap: int = 200) -> List[Document]:
+    """
+    Split a markdown document into smaller chunks while retaining metadata,
+    ensuring that each chunk is associated with its respective page number.
+
+    Args:
+        document (Document): The document to split.
+        chunk_size (int): The maximum size of each chunk.
+        chunk_overlap (int): The overlap between chunks.
+
+    Returns:
+        List[Document]: A list of split documents.
+    """
+    splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
+    chunks = splitter.split_text(document.page_content)
+    logger = logging.getLogger(__name__)
+
+    split_documents = [
+        Document(
+            page_content=chunk,
+            metadata={
+                **document.metadata,
+                "chunk_index": idx,
+                "source": "markdown_split",
+                "page_number": document.metadata.get("page_number", "unknown")
+            }
+        )
+        for idx, chunk in enumerate(chunks)
+    ]
+
+    logger.info(f"Split document from page {document.metadata.get('page_number', 'unknown')} into {len(split_documents)} chunks.")
+    return split_documents
+
 def parse_pdf(pdf_path: str) -> List[Document]:
     """
-    Extracts text from a PDF using Docling and converts each page to a LangChain Document.
+    Parses a PDF file using Docling, exports the entire document to markdown, and converts
+    it to LangChain Documents with metadata.
     
     Args:
         pdf_path (str): Path to the PDF file.
-    
+
     Returns:
-        List[Document]: A list of extracted documents with metadata.
+        List[Document]: List of structured documents.
     """
     logger = logging.getLogger(__name__)
     documents = []
@@ -56,48 +87,20 @@ def parse_pdf(pdf_path: str) -> List[Document]:
     try:
         converter = DocumentConverter()
         result = converter.convert(pdf_path)
+        docling_doc = result.document
+        
+        for page_num, page in enumerate(docling_doc.pages, start=1):
+            markdown_content = page.export_to_markdown()
+            document = Document(
+                page_content=markdown_content,
+                metadata={"source": "markdown", "page_number": page_num}
+            )
+            documents.extend(split_document(document))
+        logger.info(f"Successfully processed {pdf_path} into {len(documents)} chunks.")
     except Exception as e:
-        logger.error(f"Error reading PDF file {pdf_path}: {e}")
-        return documents
+        logger.error(f"Error parsing PDF {pdf_path}: {e}")
 
-    for page_num, page in enumerate(result.document.pages, start=1):
-        try:
-            # Extract text
-            text = page.text
-            if text:
-                cleaned_text = clean_text(text)
-                document = Document(
-                    page_content=cleaned_text, 
-                    metadata={
-                        "page_number": page_num,
-                        "source": "embedded_text"
-                    }
-                )
-                documents.extend(split_document(document))
-                logger.info(f"Extracted, cleaned, and split text from page {page_num} using Docling.")
-            else:
-                logger.warning(f"No embedded text found on page {page_num}. Skipping.")
-        except Exception as e:
-            logger.error(f"Error extracting content from page {page_num} in {pdf_path}: {e}")
-
-    logger.info(f"Total documents extracted from {pdf_path}: {len(documents)}")
     return documents
-
-def split_document(document: Document, chunk_size: int = 1000, chunk_overlap: int = 200) -> List[Document]:
-    """
-    Split a document into smaller chunks using RecursiveCharacterTextSplitter.
-    
-    Args:
-        document (Document): The document to split.
-        chunk_size (int): The maximum size of each chunk.
-        chunk_overlap (int): The overlap between chunks.
-    
-    Returns:
-        List[Document]: A list of split documents.
-    """
-    splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
-    chunks = splitter.split_text(document.page_content)
-    return [Document(page_content=chunk, metadata=document.metadata) for chunk in chunks]
 
 def load_all_content(pdf_path: str) -> List[Document]:
     """
@@ -110,7 +113,6 @@ def load_all_content(pdf_path: str) -> List[Document]:
         List[Document]: A list of extracted documents.
     """
     text_docs = parse_pdf(pdf_path)
-    # Removed OCR processing and deduplication
     all_documents = text_docs
     logger.info(f"Total documents extracted from {pdf_path}: {len(all_documents)}")
     return all_documents
@@ -126,23 +128,6 @@ def load_document(file_path: str) -> List[Document]:
 
     return documents
 
-def test_load_and_print_document(file_path: str):
-    """
-    Test function to load and print a document after processing.
-    """
-    documents = load_document(file_path)
-    for doc in documents:
-        content_source = doc.metadata.get('source', 'unknown')
-        if content_source in ['embedded_text', 'ocr']:
-            # Apply cleaning to embedded text and OCR outputs
-            cleaned_content = clean_text(doc.page_content)
-            print(f"Metadata: {doc.metadata}")
-            print(f"Content:\n{cleaned_content}\n")
-        else:
-            # For tables and other content, do not clean
-            print(f"Metadata: {doc.metadata}")
-            print(f"Content:\n{doc.page_content}\n")
-
 def test_parse_pdf_markdown():
     """
     Test function to parse Vägklimatologi.pdf and print its markdown representation.
@@ -150,17 +135,14 @@ def test_parse_pdf_markdown():
     pdf_path = "./data/Vägklimatologi.pdf"
     documents = parse_pdf(pdf_path)
     for doc in documents:
-        # Assuming DocumentConverter can export to markdown
-        markdown_output = DocumentConverter().convert_markdown(doc.page_content)
         print(f"Metadata: {doc.metadata}")
-        print(f"Markdown Content:\n{markdown_output}\n")
+        print(f"Content:\n{doc.page_content}\n")
 
 if __name__ == "__main__":
     pdf_path = "./data/Vägklimatologi.pdf"
     
-    source = pdf_path  # PDF path or URL
-    converter = DocumentConverter()
-    result = converter.convert(pdf_path)
-    print(result.document.export_to_markdown())  #
-    # Uncomment the following line to run the markdown test
-    # test_parse_pdf_markdown()
+    # Parse the PDF and print the resulting documents
+    documents = parse_pdf(pdf_path)
+    for doc in documents:
+        print(f"Metadata: {doc.metadata}")
+        print(f"Content:\n{doc.page_content}\n")
