@@ -1,13 +1,18 @@
+import ssl
+import urllib.request
+
+# Disable SSL verification
+ssl._create_default_https_context = ssl._create_unverified_context
+
+
 import logging
 import re
 from langchain.schema import Document
 from langchain.text_splitter import RecursiveCharacterTextSplitter
-from PyPDF2 import PdfReader
-import pytesseract
 from pdf2image import convert_from_path
-import fitz
-import camelot
 from typing import List
+from docling.document_converter import DocumentConverter
+
 
 logger = logging.getLogger(__name__)
 
@@ -35,9 +40,9 @@ def clean_text(text: str) -> str:
     
     return text
 
-def parse_pdf_with_pymupdf(pdf_path: str) -> List[Document]:
+def parse_pdf(pdf_path: str) -> List[Document]:
     """
-    Extracts embedded text from a PDF using PyMuPDF and identifies tables.
+    Extracts text from a PDF using Docling and converts each page to a LangChain Document.
     
     Args:
         pdf_path (str): Path to the PDF file.
@@ -49,163 +54,75 @@ def parse_pdf_with_pymupdf(pdf_path: str) -> List[Document]:
     documents = []
 
     try:
-        doc = fitz.open(pdf_path)
+        converter = DocumentConverter()
+        result = converter.convert(pdf_path)
     except Exception as e:
         logger.error(f"Error reading PDF file {pdf_path}: {e}")
         return documents
 
-    for page_num in range(len(doc)):
+    for page_num, page in enumerate(result.document.pages, start=1):
         try:
-            page = doc.load_page(page_num)
-            text = page.get_text("text")
+            # Extract text
+            text = page.text
             if text:
                 cleaned_text = clean_text(text)
-                documents.append(Document(
+                document = Document(
                     page_content=cleaned_text, 
                     metadata={
-                        "page_number": page_num + 1,
+                        "page_number": page_num,
                         "source": "embedded_text"
                     }
-                ))
-                logger.info(f"Extracted and cleaned text from page {page_num + 1} using PyMuPDF.")
+                )
+                documents.extend(split_document(document))
+                logger.info(f"Extracted, cleaned, and split text from page {page_num} using Docling.")
             else:
-                logger.warning(f"No embedded text found on page {page_num + 1}. Skipping.")
-            
-            # Check for tables on the page
-            tables = page.get_text("dict")["blocks"]
-            for block in tables:
-                if block["type"] == 0 and "lines" in block:
-                    table_text = "\n".join([" ".join(line["spans"][0]["text"] for line in block["lines"] if "spans" in line) for block in tables if block["type"] == 0])
-                    documents.append(Document(
-                        page_content=table_text,
-                        metadata={
-                            "page_number": page_num + 1,
-                            "source": "table"
-                        }
-                    ))
-                    logger.info(f"Extracted table from page {page_num + 1} using PyMuPDF.")
+                logger.warning(f"No embedded text found on page {page_num}. Skipping.")
         except Exception as e:
-            logger.error(f"Error extracting text from page {page_num + 1} in {pdf_path}: {e}")
+            logger.error(f"Error extracting content from page {page_num} in {pdf_path}: {e}")
 
-    logger.info(f"Total embedded documents extracted from {pdf_path}: {len(documents)}")
+    logger.info(f"Total documents extracted from {pdf_path}: {len(documents)}")
     return documents
 
-def split_document(document: Document, chunk_size: int = 1000, chunk_overlap: int = 200):
+def split_document(document: Document, chunk_size: int = 1000, chunk_overlap: int = 200) -> List[Document]:
     """
-    Split a document into chunks for processing, using LangChain's RecursiveCharacterTextSplitter.
+    Split a document into smaller chunks using RecursiveCharacterTextSplitter.
+    
+    Args:
+        document (Document): The document to split.
+        chunk_size (int): The maximum size of each chunk.
+        chunk_overlap (int): The overlap between chunks.
+    
+    Returns:
+        List[Document]: A list of split documents.
     """
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
-    chunks = text_splitter.split_documents([document])
-    return chunks
-
-def parse_pdf_with_ocr(pdf_path: str, page_num: int) -> List[Document]:
-    """
-    Extracts text from a PDF using OCR and converts each page to a LangChain Document.
-    """
-    images = convert_from_path(pdf_path, dpi=300)
-    documents = []
-
-    for page_num, image in enumerate(images):
-        ocr_text = pytesseract.image_to_string(image, lang='swe+eng')
-        if ocr_text:
-            try:
-                cleaned_text = clean_text(ocr_text)
-                documents.append(Document(
-                    page_content=ocr_text, 
-                    metadata={
-                        "page_number": page_num,
-                        "source": "ocr"
-                    }
-                ))
-                logger.info(f"Extracted and cleaned text from page {page_num + 1} using OCR.")
-            except ValueError:
-                logger.warning(f"OCR on page {page_num + 1} resulted in empty text after cleaning. Skipping.")
-        else:
-            logger.warning(f"No text found on page {page_num + 1} after OCR. Skipping.")
-
-    logger.info(f"Total documents extracted from {pdf_path} using OCR: {len(documents)}")
-    return documents
-
-def parse_tables(pdf_path: str) -> List[Document]:
-    """
-    Extracts tables from a PDF and converts them to LangChain Documents.
-    """
-    try:
-        tables = camelot.read_pdf(pdf_path, pages='all', flavor='stream')  # Use 'stream' or 'lattice' based on table structure
-    except Exception as e:
-        logger.error(f"Error extracting tables: {e}")
-        return []
-
-    table_documents = []
-
-    for i, table in enumerate(tables):
-        table_text = table.df.to_string(index=False)
-        table_documents.append(Document(
-            page_content=table_text,
-            metadata={
-                "table_number": i + 1,
-                "source": "table"
-            }
-        ))
-        logger.info(f"Extracted table {i + 1} from PDF.")
-
-    logger.info(f"Total tables extracted: {len(table_documents)}")
-    return table_documents
-
-
-def deduplicate_documents(documents: List[Document]) -> List[Document]:
-    seen = {}
-    unique_docs = []
-    for doc in documents:
-        doc_hash = hash(doc.page_content)
-        if doc_hash not in seen:
-            seen[doc_hash] = doc
-            unique_docs.append(doc)
-        else:
-            # Optional: Compare sources and decide whether to replace or keep the existing document
-            existing_doc = seen[doc_hash]
-            if existing_doc.metadata.get("source") == "ocr" and doc.metadata.get("source") == "embedded":
-                seen[doc_hash] = doc
-                unique_docs[-1] = doc
-    return unique_docs
+    splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
+    chunks = splitter.split_text(document.page_content)
+    return [Document(page_content=chunk, metadata=document.metadata) for chunk in chunks]
 
 def load_all_content(pdf_path: str) -> List[Document]:
     """
-    Extracts text, tables, and performs OCR on a PDF.
+    Extracts text from a PDF.
 
     Args:
         pdf_path (str): Path to the PDF file.
 
     Returns:
-        List[Document]: A combined list of all extracted documents after deduplication.
+        List[Document]: A list of extracted documents.
     """
-    text_docs = parse_pdf_with_pymupdf(pdf_path)
-    table_docs = parse_tables(pdf_path)
-    
-    # Determine pages without embedded text for OCR
-    embedded_pages = {doc.metadata["page_number"] for doc in text_docs}
-    total_pages = len(text_docs)  # Assuming one document per page
-    ocr_pages = set(range(1, total_pages + 1)) - embedded_pages
-    
-    ocr_docs = []
-    for page in ocr_pages:
-        ocr_docs.extend(parse_pdf_with_ocr(pdf_path, page))
-    
-    all_documents = text_docs + table_docs + ocr_docs
-    all_documents = deduplicate_documents(all_documents)
-    
-    logger.info(f"Total combined documents after deduplication: {len(all_documents)}")
+    text_docs = parse_pdf(pdf_path)
+    # Removed OCR processing and deduplication
+    all_documents = text_docs
+    logger.info(f"Total documents extracted from {pdf_path}: {len(all_documents)}")
     return all_documents
 
 def load_document(file_path: str) -> List[Document]:
     """
-    Load a document from a file path. Supports PDF files with text and tables extraction.
+    Load a document from a file path. Supports PDF files with text extraction.
     """
     documents = []
 
     if file_path.lower().endswith('.pdf'):
-        documents.extend(parse_pdf_with_pymupdf(file_path))
-        documents.extend(parse_tables(file_path))
+        documents.extend(parse_pdf(file_path))
 
     return documents
 
@@ -226,11 +143,24 @@ def test_load_and_print_document(file_path: str):
             print(f"Metadata: {doc.metadata}")
             print(f"Content:\n{doc.page_content}\n")
 
+def test_parse_pdf_markdown():
+    """
+    Test function to parse Vägklimatologi.pdf and print its markdown representation.
+    """
+    pdf_path = "./data/Vägklimatologi.pdf"
+    documents = parse_pdf(pdf_path)
+    for doc in documents:
+        # Assuming DocumentConverter can export to markdown
+        markdown_output = DocumentConverter().convert_markdown(doc.page_content)
+        print(f"Metadata: {doc.metadata}")
+        print(f"Markdown Content:\n{markdown_output}\n")
+
 if __name__ == "__main__":
-    pdf_path = "./data/ersattningsmodell_vaders_2019.pdf"
+    pdf_path = "./data/Vägklimatologi.pdf"
     
-    print("Testing parse_pdf_with_pymupdf:")
-    test_load_and_print_document(pdf_path)
-    
-    #print("\nTesting parse_tables:")
-    #test_load_and_print_document(pdf_path)
+    source = pdf_path  # PDF path or URL
+    converter = DocumentConverter()
+    result = converter.convert(pdf_path)
+    print(result.document.export_to_markdown())  #
+    # Uncomment the following line to run the markdown test
+    # test_parse_pdf_markdown()

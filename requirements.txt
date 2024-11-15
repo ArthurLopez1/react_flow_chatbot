@@ -16,12 +16,6 @@ tensorflow
 langchain_core
 langchain_text_splitters
 transformers
-PyPDF2==2.10.5
 faiss-cpu
 torch
-pytesseract
-pdf2image
-opencv-python
-fitz
-camelot-py[cv]==0.10.1 
-PyMuPDF
+docling

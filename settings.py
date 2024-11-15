@@ -19,7 +19,7 @@ class Config:
         self.SEARCH_RESULTS = int(os.getenv("SEARCH_RESULTS", 3))
         
         # Set environment variables
-        os.environ["TOKENIZERS_PARALLELISM"] = "true"
+        os.environ["TOKENIZERS_PARALLELISM"] = "false"
         os.environ["LANGCHAIN_TRACING_V2"] = "true"
         os.environ["LANGCHAIN_PROJECT"] = "local_rag_prototype"
         
