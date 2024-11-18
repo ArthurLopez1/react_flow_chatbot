@@ -176,3 +176,6 @@ vector_store.index
 *.index
 
 *.pkl
+
+# cleaned docs
+cleaned_docs/
