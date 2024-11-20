@@ -179,3 +179,7 @@ vector_store.index
 
 # cleaned docs
 cleaned_docs/
+
+# test files
+pymupdf_parser.py
+split_test.ipynb

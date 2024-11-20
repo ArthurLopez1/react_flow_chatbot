@@ -18,8 +18,11 @@ class VectorStoreManager:
         # Manually set the dimension for the 'sentence-transformers/all-MiniLM-L6-v2' model
         self.dimension = 384  # Adjust this value based on your specific model
 
-        self.nlist = 10  # Adjusted number of clusters based on dataset size
-        self.nprobe = 10  # Number of clusters to search
+        # Use IndexFlatL2 for small datasets
+        self.index = faiss.IndexFlatL2(self.dimension)
+        # Remove or comment out nlist and nprobe settings
+        # self.nlist = 10
+        # self.nprobe = 10
 
         # Initialize or load the FAISS index
         self._load_or_create_index()
@@ -57,18 +60,12 @@ class VectorStoreManager:
             print("Embeddings array is empty. Skipping addition to index.")
             return
 
-        # Check if there are enough training points
-        if embeddings_array.shape[0] < self.nlist * 39:  # Ensure at least 39 points per cluster
-            print(f"Not enough training points. Need at least {self.nlist * 39} points.")
-            return
+        # Remove the check for minimum training points
+        # if embeddings_array.shape[0] < self.nlist * 39:
+        #     print(f"Not enough training points. Need at least {self.nlist * 39} points.")
+        #     return
 
-        # Train the index if it's not trained
-        if not self.index.is_trained:
-            print("Training FAISS index...")
-            self.index.train(embeddings_array)
-            print("FAISS index trained.")
-
-        # Add to FAISS index
+        # Since IndexFlatL2 doesn't require training, directly add embeddings
         self.index.add(embeddings_array)
         
         # Map indices to documents
@@ -83,7 +80,7 @@ class VectorStoreManager:
         self._save_index()
         self._save_doc_mapping()
 
-    def _rerank_documents(self, documents: List[str], query: str) -> List[Tuple[str, float]]:
+    def _rerank_documents(self, candidates, query):
         """
         Rerank documents based on cosine similarity with the query.
         """
@@ -91,13 +88,17 @@ class VectorStoreManager:
             print(f"Reranking documents for query: {query}")  # Debugging print
             # Encode the query and documents
             query_embedding = self.embed_text(query)
-            doc_embeddings = np.array([self.embed_text(doc) for doc in documents])
+            doc_embeddings = np.array([self.embed_text(doc) for doc in candidates])
+
+            if doc_embeddings.size == 0:
+                print("Document embeddings are empty. Cannot perform reranking.")
+                return []
 
             # Compute cosine similarities
             cosine_scores = np.dot(doc_embeddings, query_embedding.T).flatten()
 
             # Pair each document with its score
-            reranked_results = list(zip(documents, cosine_scores))
+            reranked_results = list(zip(candidates, cosine_scores))
 
             # Sort documents by relevance score in descending order
             reranked_results.sort(key=lambda x: x[1], reverse=True)
@@ -155,28 +156,22 @@ class VectorStoreManager:
             raise
 
     def _create_index(self):
-        """
-        Create a FAISS IndexIVFFlat index for large-scale vector storage.
-        """
-        quantizer = faiss.IndexFlatL2(self.dimension)
-        self.index = faiss.IndexIVFFlat(quantizer, self.dimension, self.nlist, faiss.METRIC_L2)
-        self.index.nprobe = self.nprobe
-        print("Created a new IndexIVFFlat index.")
+        # No longer needed for IndexFlatL2
+        pass
 
     def _load_or_create_index(self):
-        """
-        Load the FAISS index from disk if available, otherwise create a new one.
-        """
         if os.path.exists(self.vector_store_path):
             try:
                 self.index = faiss.read_index(self.vector_store_path)
                 print("Vector store loaded from disk.")
             except Exception as e:
                 print(f"Error loading index: {e}. Creating a new index.")
-                self._create_index()
+                self.index = faiss.IndexFlatL2(self.dimension)
+                print("Created a new IndexFlatL2 index.")
         else:
             print("No existing vector store found. Creating a new one.")
-            self._create_index()
+            self.index = faiss.IndexFlatL2(self.dimension)
+            print("Created a new IndexFlatL2 index.")
 
     def _save_doc_mapping(self):
         """

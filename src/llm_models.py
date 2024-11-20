@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 load_dotenv()  
 
-MODEL_NAME = os.getenv("LLM_MODEL_NAME", "llama3.2:3b-instruct-fp16 ")  
+MODEL_NAME = os.getenv("LLM_MODEL_NAME", "llama3.2:3b-instruct-fp16")  
 TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", 0))
 FORMAT = os.getenv("LLM_FORMAT", None)
 

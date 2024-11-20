@@ -6,8 +6,8 @@ from pydantic import BaseModel, Field
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.output_parsers.openai_tools import PydanticToolsParser
 from langgraph.graph import StateGraph, END
-from .vectorstore import VectorStoreManager
-from .llm_models import LLM
+from src.vectorstore import VectorStoreManager
+from src.llm_models import LLM
 from langchain.schema import Document, HumanMessage
 from pydantic import BaseModel, Field
 from langchain_ollama import ChatOllama
@@ -29,12 +29,26 @@ logger = logging.getLogger(__name__)
 # Initialize the LLM once
 llm = LLM()
 
+# Initialize the vector store manager
+vector_store = VectorStoreManager()
+
 class SimpleGraphState(TypedDict):
     """Graph state containing information for each graph node."""
     question: str
     answers: List[str]
     generation: str
     documents: List[Document]  # Corrected type hint
+
+def retrieve_relevant_documents(query):
+    """
+    Retrieve relevant documents from the vector store based on the user's query.
+    """
+    documents = vector_store.retrieve_documents(query, top_k=5)
+    if not documents:
+        logger.warning("No documents found for the query.")
+    else:
+        logger.info(f"Retrieved {len(documents)} documents for the query.")
+    return documents
 
 def retrieve_documents(state: Dict[str, Any]):
     """
@@ -50,7 +64,7 @@ def retrieve_documents(state: Dict[str, Any]):
     question = state["question"]
 
     # Write retrieved documents to documents key in state
-    documents = VectorStoreManager().retrieve_documents(question)
+    documents = retrieve_relevant_documents(question)
     state["documents"] = documents      
     print(f"Retrieved documents: {documents}")
     return state

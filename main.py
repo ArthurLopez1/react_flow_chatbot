@@ -35,7 +35,7 @@ def main():
 
         # Define initial state and configuration
         state = {
-            "question": "Vilka två system används för att samla in väderdata i VädErs-modellen?",
+            "question": "Hur stor skillnad är det mellan daggpunkt och yttemperatur för att vi ska få en HR1?",
             "config": {
                 "top_k": 5  # Set top_k to match the value in vectorstore.py
             },
