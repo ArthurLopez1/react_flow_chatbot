@@ -177,9 +177,20 @@ vector_store.index
 
 *.pkl
 
+data/
+
 # cleaned docs
 cleaned_docs/
+processed_docs/
+*.json
 
 # test files
 pymupdf_parser.py
 split_test.ipynb
+split_test_2.ipynb
+
+src/testers/
+
+vectorstore/
+
+log/

@@ -1,142 +1,315 @@
-import logging
-import time
-from pathlib import Path
-from typing import List
 import os
+import re
+from PyPDF2 import PdfReader
+import pdfplumber
+from pdf2image import convert_from_path
+import pytesseract
+from PIL import Image
+import logging
+import camelot
+import unittest
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+import json
 
-from docling.datamodel.base_models import InputFormat
-from docling.datamodel.pipeline_options import PdfPipelineOptions
-from docling.document_converter import DocumentConverter, PdfFormatOption
+# ---------------------------
+# Constants and Configuration
+# ---------------------------
 
-from langchain.schema import Document
-from langchain.text_splitter import RecursiveCharacterTextSplitter, MarkdownHeaderTextSplitter
+METADATA_FILE = "processed_files_metadata.json"
+CHUNKS_DIR = "./data/chunks"
+FIGURES_DIR = "./data/figures"
+LOG_DIR = "./log"
+LOG_FILE = os.path.join(LOG_DIR, "file_handler.log")
 
-logger = logging.getLogger(__name__)
+# Ensure the log directory exists
+if not os.path.exists(LOG_DIR):
+    os.makedirs(LOG_DIR)
 
-def parse_pdfs_in_data_folder():
-    """Parse all PDF files in the data folder into Markdown and export chunks."""
-    logging.basicConfig(level=logging.INFO)
-    logger = logging.getLogger(__name__)
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler(LOG_FILE),
+        logging.StreamHandler()
+    ]
+)
 
-    data_folder = Path("./data")
-    output_dir = Path("./data/cleaned_docs")
-    output_dir.mkdir(parents=True, exist_ok=True)
+# ---------------------------
+# Helper Functions
+# ---------------------------
 
-    # Get a list of all PDF files in the data folder
-    pdf_files = list(data_folder.glob("*.pdf"))
+def clean_text(text):
+    return re.sub(r'\s+', ' ', text).strip()
 
-    if not pdf_files:
-        logger.warning("No PDF files found in the data folder.")
-        return
+def preprocess_image(image):
+    grayscale = image.convert('L')
+    return grayscale.point(lambda x: 0 if x < 140 else 255, '1')
 
-    for pdf_file in pdf_files:
-        pdf_filename = pdf_file.stem
-        markdown_output_path = output_dir / f"{pdf_filename}.md"
+def load_metadata():
+    if os.path.exists(METADATA_FILE):
+        with open(METADATA_FILE, 'r') as f:
+            return json.load(f)
+    return {}
 
-        # Check if the markdown file already exists
-        if (markdown_output_path.exists()):
-            logger.info(f"Markdown file already exists for {pdf_file.name}, skipping parsing.")
-            continue
+def save_metadata(metadata):
+    with open(METADATA_FILE, 'w') as f:
+        json.dump(metadata, f, indent=4)
 
-        logger.info(f"Processing PDF file: {pdf_file.name}")
+# ---------------------------
+# Parsing Functions
+# ---------------------------
 
-        pipeline_options = PdfPipelineOptions()
-        pipeline_options.do_ocr = True
-        pipeline_options.do_table_structure = True
-        pipeline_options.table_structure_options.do_cell_matching = False
+def parse_embedded_text(pdf_path):
+    text_data = []
+    try:
+        with pdfplumber.open(pdf_path) as pdf:
+            for page_index, page in enumerate(pdf.pages):
+                page_number = page_index + 1
+                tables = page.find_tables()
+                table_bboxes = [table.bbox for table in tables]
+                all_words = page.extract_words()
+                filtered_words = [word for word in all_words if not any(
+                    word['x0'] >= bbox[0] and word['x1'] <= bbox[2] and
+                    word['top'] >= bbox[1] and word['bottom'] <= bbox[3]
+                    for bbox in table_bboxes
+                )]
+                if not filtered_words:
+                    continue
+                lines = {}
+                for word in filtered_words:
+                    assigned = False
+                    for line_top in lines:
+                        if abs(word['top'] - line_top) <= 3:
+                            lines[line_top].append((word['x0'], word['text']))
+                            assigned = True
+                            break
+                    if not assigned:
+                        lines[word['top']] = [(word['x0'], word['text'])]
+                combined_text = " ".join(
+                    clean_text(' '.join(w[1] for w in sorted(words, key=lambda x: x[0])))
+                    for _, words in sorted(lines.items(), key=lambda x: x[0])
+                )
+                if combined_text:
+                    text_data.append({
+                        "source": os.path.basename(pdf_path),
+                        "content": combined_text.strip(),
+                        "page_number": page_number
+                    })
+    except Exception as e:
+        logging.error(f"Error extracting text from {pdf_path}: {e}")
+    return text_data
 
-        doc_converter = DocumentConverter(
-            format_options={
-                InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)
-            }
-        )
+def parse_tables_pdfplumber(pdf_path):
+    all_tables = []
+    try:
+        with pdfplumber.open(pdf_path) as pdf:
+            for page_index, page in enumerate(pdf.pages):
+                page_number = page_index + 1
+                tables = page.extract_tables()
+                for table in tables:
+                    if table:
+                        all_tables.append({
+                            "source": os.path.basename(pdf_path),
+                            "content": table,
+                            "page_number": page_number
+                        })
+    except Exception as e:
+        logging.error(f"Error extracting tables from {pdf_path}: {e}")
+    return all_tables
 
-        start_time = time.time()
+def parse_tables_camelot(pdf_path):
+    tables_data = []
+    try:
+        tables = camelot.read_pdf(pdf_path, pages='all', flavor='stream')
+        if not tables:
+            logging.warning(f"No tables found in {pdf_path} using Camelot.")
+            return tables_data
+        for table in tables:
+            df = table.df
+            headers = df.iloc[0].tolist()
+            table_rows = [
+                {header: cell for header, cell in zip(headers, row.tolist())}
+                for _, row in df.iloc[1:].iterrows()
+            ]
+            tables_data.append({
+                "source": os.path.basename(pdf_path),
+                "content": table_rows,
+                "page_number": table.page
+            })
+    except Exception as e:
+        logging.error(f"Error extracting tables with Camelot from {pdf_path}: {e}")
+    return tables_data
+
+def perform_ocr(pdf_path):
+    text_data = []
+    try:
+        images = convert_from_path(pdf_path, dpi=300)
+    except Exception as e:
+        logging.error(f"Error converting {pdf_path} to images: {e}")
+        return text_data
+    for page_number, image in enumerate(images, start=1):
         try:
-            conv_result = doc_converter.convert(pdf_file)
-            end_time = time.time() - start_time
-
-            logger.info(f"Document {pdf_file.name} converted in {end_time:.2f} seconds.")
-
-            # Export Markdown format
-            with markdown_output_path.open("w", encoding="utf-8") as fp:
-                markdown_content = conv_result.document.export_to_markdown()
-                fp.write(markdown_content)
-            logger.info(f"Exported Markdown to {markdown_output_path}.")
+            preprocessed_image = preprocess_image(image)
+            ocr_text = pytesseract.image_to_string(preprocessed_image, lang='eng')
+            cleaned_text = clean_text(ocr_text)
+            if cleaned_text:
+                text_data.append({
+                    "source": os.path.basename(pdf_path),
+                    "content": cleaned_text,
+                    "page_number": page_number
+                })
         except Exception as e:
-            logger.error(f"Failed to convert {pdf_file.name}: {e}", exc_info=True)
+            logging.error(f"OCR failed on page {page_number} of {pdf_path}: {e}")
+    return text_data
 
-    logger.info("Finished processing all PDF files in data folder.")
+def extract_figures(pdf_path):
+    figures_data = []
+    try:
+        with pdfplumber.open(pdf_path) as pdf:
+            for page_index, page in enumerate(pdf.pages):
+                page_number = page_index + 1
+                images = page.images
+                for image_index, image in enumerate(images):
+                    x0, y0, x1, y1 = image["x0"], image["top"], image["x1"], image["bottom"]
+                    # Check if the bounding box is within the page's bounding box
+                    if x0 < 0 or y0 < 0 or x1 > page.width or y1 > page.height:
+                        logging.warning(f"Skipping image with bounding box {image['x0'], image['top'], image['x1'], image['bottom']} on page {page_number} of {pdf_path} due to invalid coordinates.")
+                        continue
+                    figure = page.within_bbox((x0, y0, x1, y1)).to_image()
+                    figure_filename = f"{os.path.splitext(os.path.basename(pdf_path))[0]}_page{page_number}_figure{image_index}.png"
+                    figure_filepath = os.path.join(FIGURES_DIR, figure_filename)
+                    figure.save(figure_filepath, format="PNG")
+                    figure_metadata = {
+                        "source": os.path.basename(pdf_path),
+                        "page_number": page_number,
+                        "figure_file": figure_filepath
+                    }
+                    metadata_filename = f"{os.path.splitext(figure_filename)[0]}.json"
+                    metadata_filepath = os.path.join(FIGURES_DIR, metadata_filename)
+                    with open(metadata_filepath, 'w', encoding='utf-8') as metadata_file:
+                        json.dump(figure_metadata, metadata_file, ensure_ascii=False, indent=4)
+                    figures_data.append(figure_metadata)
+    except Exception as e:
+        logging.error(f"Error extracting figures from {pdf_path}: {e}")
+    return figures_data
 
-def split_markdown_files(chunk_size=900, chunk_overlap=150) -> List[Document]:
-    """
-    Split all markdown files in the cleaned_docs directory into smaller chunks while preserving the structure.
-    
-    Returns:
-        List[Document]: List of split documents with metadata.
-    """
-    output_dir = Path("./data/cleaned_docs")
-    markdown_files = list(output_dir.glob("*.md"))
+def parse_pdf(pdf_path):
+    if not os.path.exists(pdf_path):
+        logging.error(f"File not found: {pdf_path}")
+        return None, None, None
+    embedded_text = parse_embedded_text(pdf_path)
+    tables = parse_tables_pdfplumber(pdf_path)
+    figures = extract_figures(pdf_path)
+    if not tables:
+        logging.info(f"No tables found with pdfplumber in {pdf_path}. Trying Camelot.")
+        tables = parse_tables_camelot(pdf_path)
+    if not any(page["content"] for page in embedded_text):
+        logging.info(f"No embedded text found in {pdf_path}. Performing OCR.")
+        return perform_ocr(pdf_path), tables, figures
+    return embedded_text, tables, figures
 
-    if not markdown_files:
-        logger.warning(f"No Markdown files found in {output_dir}")
-        return []
+def process_pdfs_in_folder(folder_path):
+    all_parsed_data = []
+    metadata = load_metadata()
 
-    all_splits = []
+    for filename in os.listdir(folder_path):
+        if filename.lower().endswith('.pdf'):
+            pdf_path = os.path.join(folder_path, filename)
+            last_modified = os.path.getmtime(pdf_path)
 
-    for md_file in markdown_files:
-        logger.info(f"Processing Markdown file: {md_file.name}")
+            # Check if the file has already been processed and if it has been modified since then
+            if filename in metadata and metadata[filename] == last_modified:
+                logging.info(f"Skipping {pdf_path} as it has already been processed.")
+                continue
 
-        # Read the content of the Markdown file
-        markdown_document = md_file.read_text(encoding="utf-8")
+            logging.info(f"Processing {pdf_path}...")
+            parsed_text, parsed_tables, parsed_figures = parse_pdf(pdf_path)
 
-        # Define headers to split on
-        headers_to_split_on = [
-            ("#", "Header 1"),
-            ("##", "Header 2"),
-        ]
+            if not parsed_text and not parsed_tables and not parsed_figures:
+                logging.warning(f"Skipping {filename} due to no extracted data.")
+                continue
 
-        # Split based on headers
-        markdown_splitter = MarkdownHeaderTextSplitter(headers_to_split_on=headers_to_split_on)
-        md_header_splits = markdown_splitter.split_text(markdown_document)
+            all_parsed_data.append({
+                "pdf_file": filename,
+                "text": parsed_text,
+                "tables": parsed_tables,
+                "figures": parsed_figures
+            })
+            logging.info(f"Extracted data from {filename}.")
 
-        # Further split based on character count
-        text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=chunk_overlap)
-        splits = text_splitter.split_documents(md_header_splits)
+            # Update metadata
+            metadata[filename] = last_modified
 
-        # Add metadata
-        for doc in splits:
-            doc.metadata['source_file'] = md_file.name
-            # Retain existing metadata from header splits
-            # doc.metadata already contains metadata from md_header_splits
+    # Save metadata after processing all files
+    save_metadata(metadata)
 
-        all_splits.extend(splits)
-        logger.info(f"Split Markdown file {md_file.name} into {len(splits)} chunks.")
+    return all_parsed_data
 
-    logger.info(f"Total chunks from all Markdown files: {len(all_splits)}")
-    return all_splits
+def get_data_from_specific_page(parsed_data, target_page):
+    specific_page_data = []
+    for data in parsed_data:
+        pdf_file = data['pdf_file']
+        texts = [text for text in data['text'] if text['page_number'] == target_page]
+        tables = [table for table in data['tables'] if table['page_number'] == target_page]
+        figures = [figure for figure in data['figures'] if figure['page_number'] == target_page]
+        if texts or tables or figures:
+            specific_page_data.append({
+                "pdf_file": pdf_file,
+                "text": texts,
+                "tables": tables,
+                "figures": figures
+            })
+    return specific_page_data
 
-def load_documents():
-    """
-    Load and split documents from the data folder.
+def split_text_into_chunks(parsed_data, chunk_size=1000, chunk_overlap=100):
+    all_chunks = []
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=100)
+    for pdf_data in parsed_data:
+        pdf_file = pdf_data['pdf_file']
+        text_entries = pdf_data.get('text', [])
+        for text_entry in text_entries:
+            page_number = text_entry.get('page_number')
+            source = text_entry.get('source')
+            content = text_entry.get('content', '')
+            if content:
+                splits = text_splitter.split_text(content)
+                for split_index, split in enumerate(splits):
+                    chunk_filename = f"{os.path.splitext(pdf_file)[0]}_page{page_number}_chunk{split_index}.json"
+                    chunk_filepath = os.path.join(CHUNKS_DIR, chunk_filename)
+                    chunk_data = {
+                        'chunk_content': split,
+                        'page_number': page_number,
+                        'source': source,
+                        'chunk_file': chunk_filepath
+                    }
+                    with open(chunk_filepath, 'w', encoding='utf-8') as chunk_file:
+                        json.dump(chunk_data, chunk_file, ensure_ascii=False, indent=4)
+                    all_chunks.append(chunk_data)
+    return all_chunks
 
-    Returns:
-        List[Document]: A list of split documents ready for processing.
-    """
-    # First, parse PDFs and export to Markdown if not already done
-    parse_pdfs_in_data_folder()
+# ---------------------------
+# Main Execution Block
+# ---------------------------
 
-    # Then, split all Markdown files into chunks
-    documents = split_markdown_files()
-
-    return documents
-
-# Example usage
 if __name__ == "__main__":
-    logging.basicConfig(level=logging.INFO)
-    logger = logging.getLogger(__name__)
-
-    documents = load_documents()
-    logger.info(f"Loaded a total of {len(documents)} documents ready for embedding.")
-
-    # Now you can pass `documents` to vectorstore or further processing
+    folder_path = "./data"
+    
+    # Create chunks and figures directories if they don't exist
+    if not os.path.exists(CHUNKS_DIR):
+        os.makedirs(CHUNKS_DIR)
+    if not os.path.exists(FIGURES_DIR):
+        os.makedirs(FIGURES_DIR)
+    
+    parsed_data = process_pdfs_in_folder(folder_path)
+    chunked_data = split_text_into_chunks(parsed_data)
+    
+    # Print a sample chunk for inspection
+    if chunked_data:
+        sample_chunk = chunked_data[0]
+        print("Sample Chunk:")
+        print(f"Content: {sample_chunk['chunk_content']}\n")
+        print(f"Page Number: {sample_chunk['page_number']}")
+        print(f"Source: {sample_chunk['source']}")
+        print(f"Chunk File: {sample_chunk['chunk_file']}")
+    else:
+        print("No chunks were generated.")

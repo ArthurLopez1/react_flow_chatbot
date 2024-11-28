@@ -37,7 +37,7 @@ class SimpleGraphState(TypedDict):
     question: str
     answers: List[str]
     generation: str
-    documents: List[Document]  # Corrected type hint
+    documents: List[Document]  
 
 def retrieve_relevant_documents(query):
     """
@@ -143,7 +143,7 @@ Follow these steps to complete the task:
 
    - In-text citation: Use superscript like "¹" to refer to a reference
    
-   - Reference entry: Include the sentence and the exact page number from the source.
+   - Reference entry: include the original document title (metadata source) and page numer (metadata page_number).
 
 8. Ensure that all citations in the text have a corresponding reference entry, and vice versa.
 
@@ -214,7 +214,9 @@ You will be provided with a list of sources. Each source contains the following 
 
 1. Source text 
 
-2. URL of the source 
+2. Source title
+
+3. Page number
 
 Your task is to: 
 
@@ -272,7 +274,7 @@ def cite_sources(state: Dict[str, Any]):
     question = state["question"]
     sources = ""
     for i, doc in enumerate(state["documents"], 1):
-        document_name = doc.metadata.get('document_name', 'Unknown Document')  # Original PDF title
+        document_name = doc.metadata.get('source', 'Unknown Document')  # Original PDF title
         page_number = doc.metadata.get('page_number', 'Unknown Page')
         sources += f"{i}. {document_name} (Page {page_number})\n"
     

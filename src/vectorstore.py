@@ -3,7 +3,7 @@ import faiss
 import numpy as np
 import pickle
 from typing import List, Tuple
-from sentence_transformers import SentenceTransformer  # Updated import
+from sentence_transformers import SentenceTransformer  
 from langchain_experimental.llms.ollama_functions import OllamaFunctions
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain.schema import Document  # Add this import
@@ -44,30 +44,17 @@ class VectorStoreManager:
         if not documents:
             print("No documents to add. Skipping.")
             return
-        
+
         embeddings = [self.embed_text(doc.page_content) for doc in documents]
         if not embeddings:
             print("No embeddings generated. Skipping.")
             return
-        
-        try:
-            embeddings_array = np.vstack(embeddings)  # Ensure embeddings_array is a 2D array
-        except ValueError as e:
-            print(f"Error stacking embeddings: {e}")
-            return
-        
-        if embeddings_array.size == 0:
-            print("Embeddings array is empty. Skipping addition to index.")
-            return
 
-        # Remove the check for minimum training points
-        # if embeddings_array.shape[0] < self.nlist * 39:
-        #     print(f"Not enough training points. Need at least {self.nlist * 39} points.")
-        #     return
+        embeddings_array = np.vstack(embeddings).astype("float32")
 
-        # Since IndexFlatL2 doesn't require training, directly add embeddings
+        # Add embeddings to the index
         self.index.add(embeddings_array)
-        
+
         # Map indices to documents
         start_idx = len(self.doc_mapping)
         for i, doc in enumerate(documents):
@@ -75,7 +62,7 @@ class VectorStoreManager:
                 "page_content": doc.page_content,
                 "metadata": doc.metadata
             }
-        
+
         print(f"Added {len(documents)} documents to the vector store.")
         self._save_index()
         self._save_doc_mapping()
@@ -83,12 +70,12 @@ class VectorStoreManager:
     def _rerank_documents(self, candidates, query):
         """
         Rerank documents based on cosine similarity with the query.
+        Each candidate is a tuple of (doc_text, metadata).
         """
         try:
-            print(f"Reranking documents for query: {query}")  # Debugging print
             # Encode the query and documents
             query_embedding = self.embed_text(query)
-            doc_embeddings = np.array([self.embed_text(doc) for doc in candidates])
+            doc_embeddings = np.array([self.embed_text(doc_text) for doc_text, _ in candidates])
 
             if doc_embeddings.size == 0:
                 print("Document embeddings are empty. Cannot perform reranking.")
@@ -97,11 +84,14 @@ class VectorStoreManager:
             # Compute cosine similarities
             cosine_scores = np.dot(doc_embeddings, query_embedding.T).flatten()
 
-            # Pair each document with its score
-            reranked_results = list(zip(candidates, cosine_scores))
+            # Pair each document with its score and metadata
+            reranked_results = [
+                (candidates[i][0], candidates[i][1], cosine_scores[i])
+                for i in range(len(candidates))
+            ]
 
             # Sort documents by relevance score in descending order
-            reranked_results.sort(key=lambda x: x[1], reverse=True)
+            reranked_results.sort(key=lambda x: x[2], reverse=True)
 
             return reranked_results
         except Exception as e:
@@ -115,32 +105,28 @@ class VectorStoreManager:
         query_embedding = self.embed_text(query)
         query_embedding = query_embedding.reshape(1, -1)
         distances, indices = self.index.search(query_embedding, top_k * 2)  # Retrieve more candidates
-        
+
         # Fetch documents from mapping
         candidates = []
         for idx in indices[0]:
             if idx in self.doc_mapping:
                 doc_info = self.doc_mapping[idx]
-                candidates.append(doc_info["page_content"])
-        
+                candidates.append((doc_info["page_content"], doc_info["metadata"]))
+
         # Rerank the candidates using cosine similarity
         reranked_results = self._rerank_documents(candidates, query)
-        
+
         # Select top_k documents after reranking
         top_docs = reranked_results[:top_k]
-        
+
         # Convert to Document objects
         results = []
-        for doc_text, score in top_docs:
-            # Find the corresponding metadata
-            for idx, doc_info in self.doc_mapping.items():
-                if doc_info["page_content"] == doc_text:
-                    results.append(Document(
-                        page_content=doc_text,
-                        metadata=doc_info["metadata"]
-                    ))
-                    break
-        
+        for doc_text, metadata, score in top_docs:
+            results.append(Document(
+                page_content=doc_text,
+                metadata=metadata
+            ))
+
         print(f"Retrieved {len(results)} documents for query: '{query}' after reranking.")
         return results
 

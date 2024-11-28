@@ -1,12 +1,16 @@
 import os
 from pathlib import Path
-import logging  # Updated import for logger
+import logging
 import streamlit as st
 from src.vectorstore import VectorStoreManager
-from src.training import train_on_documents  # Changed import
+from src.training import train_on_documents
 from settings import Config
 from src.llm_models import LLM
-from src.react_workflow import run_simple_workflow  
+from src.react_workflow import run_simple_workflow
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
 # Initialize the configuration
 config = Config()
 
@@ -17,13 +21,15 @@ vec = VectorStoreManager()
 llm = LLM()
 llm_json_mode = LLM(format="json")
 
-# Load custom CSS
-def read_css():
+def load_css():
     css_path = Path(__file__).parent / "frontend" / "style.css"
-    with open(css_path) as css:
-        st.markdown(f"<style>{css.read()}</style>", unsafe_allow_html=True)
+    if css_path.exists():
+        with open(css_path) as css_file:
+            st.markdown(f"<style>{css_file.read()}</style>", unsafe_allow_html=True)
+    else:
+        logger.warning(f"CSS file not found at {css_path}.")
 
-read_css()  # Call CSS function at the start of the script
+load_css()
 
 # Streamlit app title
 st.title("Chat with Klimator")  # Main title

@@ -1,7 +1,7 @@
 import logging
-import os  
-from src.file_handler import load_documents
-from src.vectorstore import VectorStoreManager
+from pathlib import Path
+from file_handler import process_pdfs_in_folder, split_text_into_chunks
+from vectorstore import VectorStoreManager
 from langchain.schema import Document
 
 # Configure logging to display INFO level messages
@@ -10,9 +10,37 @@ logger = logging.getLogger(__name__)
 
 def train_on_documents(data_folder):
     vector_store = VectorStoreManager()
+    documents = []
 
-    # Load documents
-    documents = load_documents()
+    # Process PDFs in the data folder using file_handler.py
+    data_folder = Path(data_folder)
+    pdf_files = list(data_folder.glob("*.pdf"))
+    if not pdf_files:
+        logger.warning(f"No PDF files found in {data_folder}.")
+        return
+
+    # Step 1: Process PDFs and get parsed data
+    parsed_data = process_pdfs_in_folder(str(data_folder))
+
+    # Step 2: Split text into chunks
+    chunked_data = split_text_into_chunks(parsed_data)
+
+    if not chunked_data:
+        logger.warning("No chunks were generated from the PDFs.")
+        return
+
+    # Convert chunked data to Document objects
+    for chunk in chunked_data:
+        doc = Document(
+            page_content=chunk["chunk_content"],
+            metadata={
+                "page_number": chunk["page_number"],
+                "source": chunk["source"],
+                "chunk_file": chunk["chunk_file"]
+            }
+        )
+        documents.append(doc)
+
     num_docs = len(documents)
     logger.info(f"Loaded {num_docs} documents from {data_folder}.")
 
@@ -30,11 +58,5 @@ def train_on_documents(data_folder):
 
 # Add a main guard to execute the training when the script is run directly
 if __name__ == "__main__":
-    # Load and process documents
-    documents = load_documents()
-    
-    # Initialize the vector store manager
-    vector_store = VectorStoreManager()
-    
-    # Add documents to the vector store
-    vector_store.add_documents(documents)
+    data_folder = "./data"  # Adjust the path to your data folder if necessary
+    train_on_documents(data_folder)

@@ -6,7 +6,7 @@ from typing import List, Dict, Any
 from typing_extensions import TypedDict
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.graph import StateGraph, END
-from .file_handler import load_document, split_document
+from .testers.file_handler_0 import load_document, split_document
 from .vectorstore import VectorStoreManager
 from .llm_models import LLM
 from langchain_community.tools.tavily_search import TavilySearchResults
