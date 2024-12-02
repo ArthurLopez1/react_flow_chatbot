@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
-from file_handler import process_pdfs_in_folder, split_text_into_chunks
-from vectorstore import VectorStoreManager
+from src.file_handler import process_pdfs_in_folder, split_text_into_chunks
+from src.vectorstore import VectorStoreManager
 from langchain.schema import Document
 
 # Configure logging to display INFO level messages
@@ -21,9 +21,11 @@ def train_on_documents(data_folder):
 
     # Step 1: Process PDFs and get parsed data
     parsed_data = process_pdfs_in_folder(str(data_folder))
+    logger.info(f"Parsed data: {parsed_data}")
 
     # Step 2: Split text into chunks
     chunked_data = split_text_into_chunks(parsed_data)
+    logger.info(f"Chunked data: {chunked_data}")
 
     if not chunked_data:
         logger.warning("No chunks were generated from the PDFs.")
@@ -35,10 +37,10 @@ def train_on_documents(data_folder):
             page_content=chunk["chunk_content"],
             metadata={
                 "page_number": chunk["page_number"],
-                "source": chunk["source"],
-                "chunk_file": chunk["chunk_file"]
+                "source": chunk["source"]
             }
         )
+        logger.info(f"Adding document with metadata: {doc.metadata}")
         documents.append(doc)
 
     num_docs = len(documents)

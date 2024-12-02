@@ -7,13 +7,16 @@ import pytesseract
 from PIL import Image
 import logging
 import camelot
-import unittest
+from typing import List, Dict, Any
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 import json
+import logging
 
 # ---------------------------
 # Constants and Configuration
 # ---------------------------
+
+logger = logging.getLogger(__name__)
 
 METADATA_FILE = "processed_files_metadata.json"
 CHUNKS_DIR = "./data/chunks"
@@ -44,6 +47,12 @@ def clean_text(text):
 def preprocess_image(image):
     grayscale = image.convert('L')
     return grayscale.point(lambda x: 0 if x < 140 else 255, '1')
+
+def save_figure_image(figure, filepath):
+    # Implement your figure saving logic here
+    # For example, if figure contains image data in bytes:
+    with open(filepath, 'wb') as img_file:
+        img_file.write(figure['image_bytes'])
 
 def load_metadata():
     if os.path.exists(METADATA_FILE):
@@ -172,12 +181,13 @@ def extract_figures(pdf_path):
                 for image_index, image in enumerate(images):
                     x0, y0, x1, y1 = image["x0"], image["top"], image["x1"], image["bottom"]
                     # Check if the bounding box is within the page's bounding box
-                    if x0 < 0 or y0 < 0 or x1 > page.width or y1 > page.height:
+                    if x0 < 0 or y0 < 0 or x1 <= x0 or y1 <= y0 or x1 > page.width or y1 > page.height:
                         logging.warning(f"Skipping image with bounding box {image['x0'], image['top'], image['x1'], image['bottom']} on page {page_number} of {pdf_path} due to invalid coordinates.")
                         continue
                     figure = page.within_bbox((x0, y0, x1, y1)).to_image()
                     figure_filename = f"{os.path.splitext(os.path.basename(pdf_path))[0]}_page{page_number}_figure{image_index}.png"
                     figure_filepath = os.path.join(FIGURES_DIR, figure_filename)
+                    os.makedirs(os.path.dirname(figure_filepath), exist_ok=True)  # Ensure directory exists
                     figure.save(figure_filepath, format="PNG")
                     figure_metadata = {
                         "source": os.path.basename(pdf_path),
@@ -261,31 +271,53 @@ def get_data_from_specific_page(parsed_data, target_page):
             })
     return specific_page_data
 
-def split_text_into_chunks(parsed_data, chunk_size=1000, chunk_overlap=100):
-    all_chunks = []
-    text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_size, chunk_overlap=100)
-    for pdf_data in parsed_data:
-        pdf_file = pdf_data['pdf_file']
-        text_entries = pdf_data.get('text', [])
+def split_text_into_chunks(parsed_data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    chunks_dir = './data/chunks'
+    figures_dir = './data/figures'  # Add this line to define the figures directory
+
+    # Ensure both directories exist
+    os.makedirs(chunks_dir, exist_ok=True)
+    os.makedirs(figures_dir, exist_ok=True)  # Create figures directory if it doesn't exist
+
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=1000,
+        chunk_overlap=200,
+        length_function=len,
+        separators=["\n\n", "\n", " ", ""]
+    )
+
+    chunked_data = []
+    for data in parsed_data:
+        text_entries = data.get("text", [])
         for text_entry in text_entries:
-            page_number = text_entry.get('page_number')
-            source = text_entry.get('source')
-            content = text_entry.get('content', '')
-            if content:
-                splits = text_splitter.split_text(content)
-                for split_index, split in enumerate(splits):
-                    chunk_filename = f"{os.path.splitext(pdf_file)[0]}_page{page_number}_chunk{split_index}.json"
-                    chunk_filepath = os.path.join(CHUNKS_DIR, chunk_filename)
-                    chunk_data = {
-                        'chunk_content': split,
-                        'page_number': page_number,
-                        'source': source,
-                        'chunk_file': chunk_filepath
-                    }
+            text = text_entry.get("content", "")
+            page_number = text_entry.get("page_number", 1)
+            source = text_entry.get("source", "unknown_source")
+
+            if not text:
+                logger.warning(f"No text content found for page {page_number} in {source}. Skipping chunking.")
+                continue
+
+            chunks = text_splitter.split_text(text)
+            for i, chunk in enumerate(chunks):
+                chunk_info = {
+                    "chunk_content": chunk,
+                    "page_number": page_number,
+                    "source": source,
+                    "chunk_index": i
+                }
+                chunked_data.append(chunk_info)
+
+                # Optionally, save each chunk to a JSON file
+                chunk_filepath = os.path.join(chunks_dir, f"{source}_page{page_number}_chunk{i}.json")
+                try:
                     with open(chunk_filepath, 'w', encoding='utf-8') as chunk_file:
-                        json.dump(chunk_data, chunk_file, ensure_ascii=False, indent=4)
-                    all_chunks.append(chunk_data)
-    return all_chunks
+                        json.dump(chunk_info, chunk_file, ensure_ascii=False, indent=4)
+                    logger.info(f"Chunk saved to {chunk_filepath}")
+                except Exception as e:
+                    logger.error(f"Error writing chunk to {chunk_filepath}: {e}")
+
+    return chunked_data
 
 # ---------------------------
 # Main Execution Block
