@@ -13,6 +13,7 @@ from langchain.prompts.chat import (
 )
 from sklearn.metrics.pairwise import cosine_similarity  
 from langchain_core.runnables import RunnableSequence
+import os
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -207,6 +208,24 @@ def initialize_simple_graph():
 
     # Compile the graph
     return workflow.compile()
+
+    # Save the Mermaid graph image to the assets folder
+    image_path = os.path.join("assets", "workflow_graph.png")
+    graph_image = graph.get_graph().draw_mermaid_png()
+    with open(image_path, "wb") as f:
+        f.write(graph_image)
+
+    return graph
+    def save_graph_image(graph):
+        """Save the Mermaid graph image to the assets folder."""
+        image_path = os.path.join("assets", "workflow_graph.png")
+        graph_image = graph.get_graph().draw_mermaid_png()
+        with open(image_path, "wb") as f:
+            f.write(graph_image)
+        logger.info(f"Graph image saved to {image_path}")
+
+    # Save the graph image
+    save_graph_image(workflow)
 
 def run_simple_workflow(state: Dict[str, Any]):
     """Run the simplified workflow."""

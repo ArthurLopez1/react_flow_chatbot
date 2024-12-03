@@ -70,18 +70,3 @@ if st.button("Get Answer"):
     logging.info(f"Final state: {final_state}")  # Ensure correct logger is used
     print(f"Final state: {final_state}")  # Ensure final state is printed to console
 
-#if __name__ == "__main__":
-#    # Define initial state
-#    state = {
-#        "question": "Hur ofta analyseras väderdata i VädErs-modellen?"
-#    }
-#
-#    # Run the simple workflow
-#    events = run_simple_workflow(state)
-#
-#    # Output the final generated answer
-#    final_state = events[-1] if events else {}
-#    generated_answer = final_state.get("generation", "No answer generated.")
-#    print("Final Generated Answer:")
-#    print(generated_answer)
-#    logging.info(f"Final state: {final_state}")

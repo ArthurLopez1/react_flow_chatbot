@@ -4,7 +4,7 @@ from src.file_handler import process_pdfs_in_folder, split_text_into_chunks
 from src.vectorstore import VectorStoreManager
 from langchain.schema import Document
 
-# Configure logging to display INFO level messages
+# logging 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 

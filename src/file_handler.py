@@ -1,9 +1,8 @@
 import os
 import re
-from PyPDF2 import PdfReader
+import pytesseract
 import pdfplumber
 from pdf2image import convert_from_path
-import pytesseract
 from PIL import Image
 import logging
 import camelot
@@ -154,21 +153,20 @@ def perform_ocr(pdf_path):
     try:
         images = convert_from_path(pdf_path, dpi=300)
     except Exception as e:
-        logging.error(f"Error converting {pdf_path} to images: {e}")
+        logger.error(f"Error converting {pdf_path} to images: {e}")
         return text_data
     for page_number, image in enumerate(images, start=1):
         try:
-            preprocessed_image = preprocess_image(image)
-            ocr_text = pytesseract.image_to_string(preprocessed_image, lang='eng')
-            cleaned_text = clean_text(ocr_text)
-            if cleaned_text:
-                text_data.append({
-                    "source": os.path.basename(pdf_path),
-                    "content": cleaned_text,
-                    "page_number": page_number
-                })
+            text = pytesseract.image_to_string(image, lang='swe+eng')
+            cleaned_text = clean_text(text)
+            text_data.append({
+                "page_number": page_number,
+                "content": cleaned_text,
+                "source": os.path.basename(pdf_path)
+            })
+            logger.info(f"Extracted text from page {page_number} of {pdf_path}.")
         except Exception as e:
-            logging.error(f"OCR failed on page {page_number} of {pdf_path}: {e}")
+            logger.error(f"OCR failed on page {page_number} of {pdf_path}: {e}")
     return text_data
 
 def extract_figures(pdf_path):
