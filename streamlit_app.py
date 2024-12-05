@@ -78,7 +78,7 @@ load_css()
 
 st.markdown("<h3>chat with</h3>", unsafe_allow_html=True)
 
-logo_path = Path(__file__).parent / "assets" / "klimator.png"
+logo_path = Path(__file__).parent.parent / "assets" / "klimator.png"
 
 if logo_path.exists():
     encoded_logo = get_image_as_base64(logo_path)
@@ -171,8 +171,3 @@ if send_button:
                 st.error("Sorry, I encountered an error processing your request. Please try again.")
     else:
         st.warning("Please enter a question before sending.")
-
-
-#[theme]
-#base="light"
-#primaryColor="#a8a69a"
