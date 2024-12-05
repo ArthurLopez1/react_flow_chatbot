@@ -1,24 +1,28 @@
-# langchain==0.0.148
+Ipython
+langchain==0.3.21
 langchain-community
-llama-parse
 langchain-nomic
 langchain-ollama
 scikit-learn
 streamlit
 ollama
 langgraph
-Ipython
+ipython
 ipykernel
 langchain-huggingface
 sentence-transformers
 langchain-cohere
 tensorflow
-langchain_core
-langchain_text_splitters
 transformers
 faiss-cpu
 torch
-docling
 numpy<2.0
-spacy
-en_core_web_md @ https://github.com/explosion/spacy-models/releases/download/en_core_web_md-3.0.0/en_core_web_md-3.0.0.tar.gz
+spacy==3.8.2
+pytesseract
+pdfplumber
+pdf2image
+pillow
+camelot
+typing_extensions
+
+thinc==8.3.2
