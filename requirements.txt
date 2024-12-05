@@ -16,3 +16,4 @@ pillow
 pytesseract
 camelot-py
 opencv-python-headless
+tavily-python
