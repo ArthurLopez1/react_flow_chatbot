@@ -9,10 +9,10 @@ langgraph
 ipython
 ipykernel
 langchain-huggingface
-sentence-transformers
+sentence-transformers==3.3.1
 langchain-cohere
 tensorflow
-transformers
+transformers==4.28.0
 faiss-cpu
 torch
 numpy
@@ -22,3 +22,4 @@ pdfplumber
 pdf2image
 pillow
 typing_extensions
+tf-keras
