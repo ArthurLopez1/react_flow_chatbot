@@ -1,5 +1,5 @@
 Ipython
-langchain==0.3.21
+langchain
 langchain-community
 langchain-nomic
 langchain-ollama
