@@ -195,7 +195,7 @@ button:hover, .stButton button:hover {
     border-radius: 5px;
 }
 
-/*[data-testid|="stHeader"] {
+[data-testid|="stHeader"] {
     display: none;
   }
 

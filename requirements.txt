@@ -1,4 +1,3 @@
-Ipython
 langchain
 langchain-community
 langchain-nomic
@@ -22,7 +21,4 @@ pytesseract
 pdfplumber
 pdf2image
 pillow
-camelot
 typing_extensions
-
-thinc
