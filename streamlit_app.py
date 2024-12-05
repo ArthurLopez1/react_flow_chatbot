@@ -134,7 +134,7 @@ else:
 
 
 # Create columns for input and send button
-col1, col2 = st.columns([5, 1])  # Adjust the ratio as needed
+col1, col2 = st.columns([3, 1])  # Adjust the ratio as needed
 
 with col1:
     question = st.text_input(

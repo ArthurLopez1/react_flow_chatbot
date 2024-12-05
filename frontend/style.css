@@ -157,6 +157,10 @@ html, body, div[role="main"] {
     margin-bottom: 5px;
 }
 
+div[data-testid="InputInstructions"] > span:nth-child(1) {
+    visibility: hidden;
+}
+
 /* Scrollbar styling for chat container */
 .chat-container::-webkit-scrollbar {
     width: 8px;
@@ -193,7 +197,7 @@ button:hover, .stButton button:hover {
 
 /*[data-testid|="stHeader"] {
     display: none;
-  }*/
+  }
 
 /* Targeting Streamlit elements */
 [data-testid="stMarkdownContainer"] {
@@ -255,7 +259,3 @@ button:hover, .stButton button:hover {
     color: #ffffff !important;                 /* Change text color to white on hover */
 }
 
-/* Hide the "Press Enter to Apply" tooltip */
-.css-1cpxqw2.edgvbvh3::after {
-    content: none;
-}
