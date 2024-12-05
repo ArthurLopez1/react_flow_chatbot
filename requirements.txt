@@ -16,8 +16,8 @@ tensorflow
 transformers
 faiss-cpu
 torch
-numpy<2.0.0
-spacy==3.8.2
+numpy
+spacy
 pytesseract
 pdfplumber
 pdf2image
@@ -25,4 +25,4 @@ pillow
 camelot
 typing_extensions
 
-thinc==8.3.2
+thinc
