@@ -27,15 +27,7 @@ st.markdown(
         border-radius: 5px;
     }
 
-    /* Style for the Trained on section in sidebar */
-    .trained-on-title {
-        font-size: 18px;
-        font-weight: bold;
-        margin-bottom: 10px;
-    }
-    .trained-on-item {
-        margin-bottom: 5px;
-    }
+
     </style>
     """,
     unsafe_allow_html=True
@@ -78,7 +70,7 @@ load_css()
 
 st.markdown("<h3>chat with</h3>", unsafe_allow_html=True)
 
-logo_path = Path(__file__).parent.parent / "assets" / "klimator.png"
+logo_path = Path(__file__).parent / "assets" / "klimator.png"
 
 if logo_path.exists():
     encoded_logo = get_image_as_base64(logo_path)

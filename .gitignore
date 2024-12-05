@@ -195,6 +195,4 @@ vectorstore/
 
 log/
 
-assets/
-
 .streamlit/
