@@ -14,3 +14,4 @@ pdf2image
 pillow
 pytesseract
 camelot-py
+opencv-python
