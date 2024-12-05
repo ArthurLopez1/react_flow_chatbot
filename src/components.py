@@ -371,7 +371,7 @@ def initialize_graph(config):
     graph = workflow.compile()
 
     # Save the Mermaid graph image to the assets folder
-    image_path = os.path.join("assets", "workflow_graph.png")
+    image_path = os.path.join("./assets", "workflow_graph.png")
     graph_image = graph.get_graph().draw_mermaid_png()
     with open(image_path, "wb") as f:
         f.write(graph_image)
