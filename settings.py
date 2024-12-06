@@ -1,8 +1,13 @@
 import os
+import logging
 from dotenv import load_dotenv
 
 class Config:
     def __init__(self):
+        logging.basicConfig(level=logging.INFO)
+        self.logger = logging.getLogger(__name__)
+        self.logger.info("Loading environment variables.")
+        
         load_dotenv()
         
         # Load environment variables
@@ -24,7 +29,7 @@ class Config:
         os.environ["LANGCHAIN_PROJECT"] = "local_rag_prototype"
         
         # Ensure environment variables are set for local model usage
-        self.LLM_MODEL_NAME = os.getenv("LLM_MODEL_NAME", "llama3.2:3b-instruct-fp16")  # Ensure this model is available locally
+        self.LLM_MODEL_NAME = os.getenv("LLM_MODEL_NAME", "llama3.2:3b-instruct-fp16")
         self.TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", 0))
         self.FORMAT = os.getenv("LLM_FORMAT", None)
         
@@ -36,6 +41,7 @@ class Config:
         required_vars = ["TAVILY_API_KEY", "LANGCHAIN_API_KEY"]
         for var in required_vars:
             if getattr(self, var) is None:
+                self.logger.error(f"Missing required environment variable: {var}")
                 raise EnvironmentError(f"Missing required environment variable: {var}")
 
 # Example usage
