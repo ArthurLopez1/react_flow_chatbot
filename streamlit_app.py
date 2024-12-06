@@ -1,14 +1,14 @@
 import streamlit as st
 from pathlib import Path
 import logging
-import uuid
-import os
+from azure.storage.blob import BlobServiceClient, ContainerClient
 from settings import Config
 from src.vectorstore import VectorStoreManager
 from src.training import train_on_documents
 from src.llm_models import LLM
 from src.react_workflow import run_simple_workflow
 import base64
+
 
 # Custom CSS to style the send button and sidebar
 st.markdown(
@@ -42,6 +42,45 @@ config = Config()
 
 # Initialize the vector store manager
 vec = VectorStoreManager()
+
+def download_vector_store():
+    account_name = st.secrets["azure"]["account_name"]
+    container_name = st.secrets["azure"]["container_name"]
+    sas_token = st.secrets["azure"]["sas_token"]
+
+    try:
+        blob_service_client = BlobServiceClient(
+            account_url=f"https://reactflow.blob.core.windows.net",
+            credential=sas_token
+        )
+        container_client = blob_service_client.get_container_client(container_name)
+
+        vectorstore_dir = Path("vectorstore")
+        vectorstore_dir.mkdir(exist_ok=True)
+
+        blobs = container_client.list_blobs()
+
+        for blob in blobs:
+            blob_client = container_client.get_blob_client(blob)
+            download_path = vectorstore_dir / blob.name
+            with open(download_path, "wb") as file:
+                file.write(blob_client.download_blob().readall())
+            logger.info(f"Downloaded {blob.name} to {download_path}")
+
+        logger.info("All vector store files downloaded successfully.")
+        return True
+
+    except Exception as e:
+        logger.error(f"Error downloading vector store: {e}")
+        st.error(f"Error downloading vector store: {e}")
+        return False
+
+# Download the vector store
+if download_vector_store():
+    # Initialize the vector store with the downloaded files
+    vec.initialize_vector_store(Path("vectorstore"))
+else:
+    st.stop()
 
 # Initialize models
 llm = LLM()

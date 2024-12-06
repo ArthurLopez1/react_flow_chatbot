@@ -18,3 +18,4 @@ camelot-py
 opencv-python-headless
 tavily-python
 python-dotenv
+azure-storage-blob
