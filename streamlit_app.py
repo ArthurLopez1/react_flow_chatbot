@@ -77,8 +77,12 @@ def download_vector_store():
 
 # Download the vector store
 if download_vector_store():
-    # Initialize the vector store with the downloaded files
-    vec.initialize_vector_store(Path("vectorstore"))
+    try:
+        vec.initialize()
+    except Exception as init_error:
+        logger.error(f"Failed to initialize vector store: {init_error}")
+        st.error(f"Failed to initialize vector store: {init_error}")
+        st.stop()
 else:
     st.stop()
 

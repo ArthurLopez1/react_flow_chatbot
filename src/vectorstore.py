@@ -9,23 +9,21 @@ from langchain_experimental.llms.ollama_functions import OllamaFunctions
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain.schema import Document  # Add this import
 import logging
+import faiss
+from pathlib import Path
+
 
 logger = logging.getLogger(__name__)
 
 class VectorStoreManager:
-    def __init__(self, vector_store_path: str = "vector_store.index", doc_mapping_path: str = "doc_mapping.pkl"):
-        self.vector_store_path = os.path.abspath(vector_store_path)
-        self.doc_mapping_path = os.path.abspath(doc_mapping_path)
-        self.embedding_model = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
-        
-        # Manually set the dimension for the 'sentence-transformers/all-MiniLM-L6-v2' model
-        self.dimension = 384  # Adjust this value based on your specific model
-
-        # Initialize or load the FAISS index
-        self._load_or_create_index()
-
-        # Document mapping for retrieval
-        self.doc_mapping = self._load_doc_mapping()
+    def __init__(self, vector_store_path: Path, doc_mapping_path: Path, dimension: int):
+        self.vector_store_path = vector_store_path
+        self.doc_mapping_path = doc_mapping_path
+        self.dimension = dimension
+        self.index = None
+        self.doc_mapping = {}
+        self.logger = logging.getLogger(__name__)
+        logging.basicConfig(level=logging.INFO)
 
     def embed_text(self, text: str):
         if not isinstance(text, str):
@@ -70,7 +68,6 @@ class VectorStoreManager:
         self._save_index()
         self._save_doc_mapping()
 
-# vectorstore.py
 
     def _rerank_documents(self, candidates, query):
         """
@@ -150,48 +147,67 @@ class VectorStoreManager:
         
         return results
 
+    def initialize(self):
+        """
+        Public method to initialize the vector store by loading or creating the FAISS index
+        and loading the document mappings.
+        """
+        self._load_or_create_index()
+        self.doc_mapping = self._load_doc_mapping()
+
     def _save_index(self):
         """
         Persist the FAISS index to disk.
         """
         try:
-            faiss.write_index(self.index, self.vector_store_path)
-            print(f"FAISS index saved to {self.vector_store_path}.")
+            faiss.write_index(self.index, str(self.vector_store_path))
+            self.logger.info(f"FAISS index saved to {self.vector_store_path}.")
         except Exception as e:
-            print(f"Error saving FAISS index to disk: {e}")
+            self.logger.error(f"Error saving FAISS index to disk: {e}")
             raise
 
     def _create_index(self):
-        # No longer needed for IndexFlatL2
-        pass
+        # Initialize a new FAISS index
+        self.index = faiss.IndexFlatL2(self.dimension)
+        self.logger.info("Created a new IndexFlatL2 index.")
 
     def _load_or_create_index(self):
-        if os.path.exists(self.vector_store_path):
+        """
+        Load the FAISS index from disk if it exists; otherwise, create a new one.
+        """
+        if self.vector_store_path.exists():
             try:
-                self.index = faiss.read_index(self.vector_store_path)
-                print("Vector store loaded from disk.")
+                self.index = faiss.read_index(str(self.vector_store_path))
+                self.logger.info("Vector store loaded from disk.")
             except Exception as e:
-                print(f"Error loading index: {e}. Creating a new index.")
-                self.index = faiss.IndexFlatL2(self.dimension)
-                print("Created a new IndexFlatL2 index.")
+                self.logger.error(f"Error loading index: {e}. Creating a new index.")
+                self._create_index()
         else:
-            print("No existing vector store found. Creating a new one.")
-            self.index = faiss.IndexFlatL2(self.dimension)
-            print("Created a new IndexFlatL2 index.")
+            self.logger.info("No existing vector store found. Creating a new one.")
+            self._create_index()
 
     def _save_doc_mapping(self):
         """
         Save the document mapping to disk for retrieval.
         """
-        with open(self.doc_mapping_path, "wb") as f:
-            pickle.dump(self.doc_mapping, f)
-        print("Document mapping saved to disk.")
+        try:
+            with open(self.doc_mapping_path, "wb") as f:
+                pickle.dump(self.doc_mapping, f)
+            self.logger.info("Document mapping saved to disk.")
+        except Exception as e:
+            self.logger.error(f"Error saving document mapping: {e}")
+            raise
 
     def _load_doc_mapping(self):
         """
         Load the document mapping from a file if it exists.
         """
-        if os.path.exists(self.doc_mapping_path):
-            with open(self.doc_mapping_path, 'rb') as f:
-                return pickle.load(f)
+        if self.doc_mapping_path.exists():
+            try:
+                with open(self.doc_mapping_path, 'rb') as f:
+                    self.logger.info("Loading document mapping from disk.")
+                    return pickle.load(f)
+            except Exception as e:
+                self.logger.error(f"Error loading document mapping: {e}")
+        self.logger.info("No existing document mapping found. Starting fresh.")
         return {}

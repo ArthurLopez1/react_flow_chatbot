@@ -4,12 +4,22 @@ from src.file_handler import process_pdfs_in_folder, split_text_into_chunks
 from src.vectorstore import VectorStoreManager
 from langchain.schema import Document
 
-# logging 
+# Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 def train_on_documents(data_folder):
-    vector_store = VectorStoreManager()
+    vector_store_path = Path("vectorstore/vectorstore.index")
+    doc_mapping_path = Path("vectorstore/doc_mapping.pkl")
+    dimension = 384  # Ensure consistency with vectorstore.py
+
+    vector_store = VectorStoreManager(
+        vector_store_path=vector_store_path,
+        doc_mapping_path=doc_mapping_path,
+        dimension=dimension
+    )
+    vector_store.initialize()
+
     documents = []
 
     # Process PDFs in the data folder using file_handler.py
