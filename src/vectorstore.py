@@ -25,6 +25,9 @@ class VectorStoreManager:
         self.logger = logging.getLogger(__name__)
         logging.basicConfig(level=logging.INFO)
 
+        self.embedding_model = HuggingFaceEmbeddings()
+
+
     def initialize(self):
         """
         Public method to initialize the vector store by loading or creating the FAISS index
@@ -212,4 +215,4 @@ class VectorStoreManager:
         self.logger.info("No existing document mapping found. Starting fresh.")
         return {}
     
-    embedding_model = HuggingFaceEmbeddings()
+    

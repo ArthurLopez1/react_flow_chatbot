@@ -33,19 +33,19 @@ class SimpleGraphState(TypedDict):
 def retrieve_relevant_documents(state: Dict[str, Any]):
     query = state.get("question", "")
     
-    # If 'question' is a dict, extract the actual query string
-    if isinstance(query, dict):
-        query = query.get("text", "")
-    
     if not isinstance(query, str):
         logger.error(f"Expected query to be a string, but got {type(query)}. Content: {query}")
         state["documents"] = []
         return state
     
-    documents = vector_store.retrieve_documents(query, top_k=5)
-    retrieved_docs = vector_store.retrieve_documents(query, top_k=1)  # Added line
-    state["documents"] = documents
-    return state
+    try:
+        documents = vector_store.retrieve_documents(query, top_k=5)
+        state["documents"] = documents
+        return state
+    except Exception as e:
+        logger.error(f"Error retrieving documents: {e}")
+        state["documents"] = []
+        return state
 
 def retrieve_documents(state: Dict[str, Any]):
     """

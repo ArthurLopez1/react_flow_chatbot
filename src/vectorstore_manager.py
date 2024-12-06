@@ -30,5 +30,5 @@ class VectorStoreSingleton:
                 raise
         return cls._instance
 
-# Provide a module-level singleton instance
+# singleton instance
 vector_store_instance = VectorStoreSingleton()
