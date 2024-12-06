@@ -50,7 +50,7 @@ def download_vector_store():
 
     try:
         blob_service_client = BlobServiceClient(
-            account_url=f"https://reactflow.blob.core.windows.net",
+            account_url = f"https://{account_name}.blob.core.windows.net",
             credential=sas_token
         )
         container_client = blob_service_client.get_container_client(container_name)
