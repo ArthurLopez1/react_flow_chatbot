@@ -25,6 +25,14 @@ class VectorStoreManager:
         self.logger = logging.getLogger(__name__)
         logging.basicConfig(level=logging.INFO)
 
+    def initialize(self):
+        """
+        Public method to initialize the vector store by loading or creating the FAISS index
+        and loading the document mappings.
+        """
+        self._load_or_create_index()
+        self.doc_mapping = self._load_doc_mapping()
+
     def embed_text(self, text: str):
         if not isinstance(text, str):
             logger.error(f"Expected text to be a string, but got {type(text)}. Content: {text}")
@@ -146,14 +154,6 @@ class VectorStoreManager:
         logger.info(f"Retrieved {len(results)} documents for query: '{query}' after reranking.")
         
         return results
-
-    def initialize(self):
-        """
-        Public method to initialize the vector store by loading or creating the FAISS index
-        and loading the document mappings.
-        """
-        self._load_or_create_index()
-        self.doc_mapping = self._load_doc_mapping()
 
     def _save_index(self):
         """
