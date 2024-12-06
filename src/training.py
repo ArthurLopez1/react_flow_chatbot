@@ -60,5 +60,5 @@ def train_on_documents(data_folder):
 
 # Add a main guard to execute the training when the script is run directly
 if __name__ == "__main__":
-    data_folder = "./data"  # Adjust the path to your data folder if necessary
+    data_folder = Path("./data")
     train_on_documents(data_folder)
