@@ -1,5 +1,6 @@
 import os
 import faiss
+faiss.omp_set_num_threads(1)
 import numpy as np
 import pickle
 from typing import List, Tuple, Dict
@@ -9,24 +10,26 @@ from langchain_experimental.llms.ollama_functions import OllamaFunctions
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain.schema import Document  # Add this import
 import logging
-import faiss
 from pathlib import Path
 
 
 logger = logging.getLogger(__name__)
 
 class VectorStoreManager:
-    def __init__(self, vector_store_path: Path, doc_mapping_path: Path, dimension: int):
+    def __init__(self, vector_store_path: Path, doc_mapping_path: Path):
         self.vector_store_path = vector_store_path
         self.doc_mapping_path = doc_mapping_path
-        self.dimension = dimension
         self.index = None
         self.doc_mapping = {}
         self.logger = logging.getLogger(__name__)
         logging.basicConfig(level=logging.INFO)
-
-        self.embedding_model = HuggingFaceEmbeddings()
-
+        self.embedding_model = HuggingFaceEmbeddings(
+            model_name='sentence-transformers/multi-qa-MiniLM-L6-cos-v1',
+            model_kwargs={'device': 'cpu'}
+        )
+        # Set the dimension based on the embedding model output
+        test_embedding = self.embedding_model.embed_query("test")
+        self.dimension = len(test_embedding)
 
     def initialize(self):
         """
@@ -214,5 +217,4 @@ class VectorStoreManager:
                 self.logger.error(f"Error loading document mapping: {e}")
         self.logger.info("No existing document mapping found. Starting fresh.")
         return {}
-    
-    
+

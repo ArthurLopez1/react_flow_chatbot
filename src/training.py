@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
-from src.file_handler import process_pdfs_in_folder, split_text_into_chunks
-from src.vectorstore_manager import vector_store_instance as vector_store
+from file_handler import process_pdfs_in_folder, split_text_into_chunks
+from vectorstore import VectorStoreManager
 from langchain.schema import Document
 
 # Configure logging
@@ -15,6 +15,7 @@ def train_on_documents(data_folder):
     # Process PDFs in the data folder using file_handler.py
     data_folder = Path(data_folder)
     pdf_files = list(data_folder.glob("*.pdf"))
+    
     if not pdf_files:
         logger.warning(f"No PDF files found in {data_folder}.")
         return
@@ -48,6 +49,10 @@ def train_on_documents(data_folder):
 
     if documents:
         # Add documents to the vector store
+        vector_store_path = Path("vectorstore/vector_store.index")
+        doc_mapping_path = Path("vectorstore/doc_mapping.pkl")
+        vector_store = VectorStoreManager(vector_store_path, doc_mapping_path)
+        vector_store.initialize()
         vector_store.add_documents(documents)
         logger.info(f"Added {len(documents)} documents to the vector store.")
     else:

@@ -1,7 +1,9 @@
 import logging
 from pathlib import Path
+import sys
+sys.path.append(str(Path(__file__).resolve().parent.parent))
 from settings import Config
-from src.vectorstore import VectorStoreManager
+from vectorstore import VectorStoreManager
 import threading
 
 # Configure logging
@@ -21,8 +23,7 @@ class VectorStoreSingleton:
             try:
                 cls._instance = VectorStoreManager(
                     vector_store_path=Path(config.VECTOR_STORE_PATH) / "vectorstore.index",
-                    doc_mapping_path=Path(config.VECTOR_STORE_PATH) / "doc_mapping.pkl",
-                    dimension=384  # Ensure this matches your embedding dimension
+                    doc_mapping_path=Path(config.VECTOR_STORE_PATH) / "doc_mapping.pkl"
                 )
                 cls._instance.initialize()
                 logger.info("VectorStoreManager singleton instance created and initialized.")
