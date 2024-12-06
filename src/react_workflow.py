@@ -1,3 +1,4 @@
+from pathlib import Path
 import logging
 from typing import List, Dict, Any
 from typing_extensions import TypedDict
@@ -13,7 +14,7 @@ from langchain.prompts.chat import (
 )
 from sklearn.metrics.pairwise import cosine_similarity  
 from langchain_core.runnables import RunnableSequence
-import os
+from src.vectorstore_manager import vector_store_instance as vector_store
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -21,17 +22,6 @@ logger = logging.getLogger(__name__)
 
 # Initialize the LLM once
 llm = LLM()
-
-# Initialize the vector store manager
-vector_store = VectorStoreManager()
-
-# Test retrieval
-query = "Test query relevant to your documents"
-retrieved_docs = vector_store.retrieve_documents(query, top_k=1)
-
-for doc in retrieved_docs:
-    print(f"Retrieved Document Metadata: {doc.metadata}")
-    print(f"Content: {doc.page_content}")
 
 class SimpleGraphState(TypedDict):
     """Graph state containing information for each graph node."""
@@ -53,6 +43,7 @@ def retrieve_relevant_documents(state: Dict[str, Any]):
         return state
     
     documents = vector_store.retrieve_documents(query, top_k=5)
+    retrieved_docs = vector_store.retrieve_documents(query, top_k=1)  # Added line
     state["documents"] = documents
     return state
 

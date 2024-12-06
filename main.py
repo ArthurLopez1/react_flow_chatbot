@@ -2,7 +2,7 @@ import os
 import logging
 import faulthandler
 from src.llm_models import LLM
-from src.vectorstore import VectorStoreManager
+from src.vectorstore_manager import vector_store_instance as vector_store  # Updated import
 from src.training import train_on_documents  
 from settings import Config
 from src.react_workflow import run_simple_workflow
@@ -21,16 +21,10 @@ def main():
         logger.info(f"Training on documents in folder: {data_folder}")
         train_on_documents(data_folder)  # Updated function call
         logger.info("Training completed successfully.")
-
-        # Initialize the vector store for querying
-        logger.info("Initializing vector store.")
-        vector_store = VectorStoreManager()
-        logger.info("Vector store initialized.")
         
         # Initialize models
         logger.info("Initializing LLM models.")
         llm = LLM()
-        llm_json_mode = LLM(format="json")
         logger.info("LLM models initialized.")
 
         # Define initial state and configuration

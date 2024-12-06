@@ -211,3 +211,5 @@ class VectorStoreManager:
                 self.logger.error(f"Error loading document mapping: {e}")
         self.logger.info("No existing document mapping found. Starting fresh.")
         return {}
+    
+    embedding_model = HuggingFaceEmbeddings()

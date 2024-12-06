@@ -1,7 +1,7 @@
 import logging
 from pathlib import Path
 from src.file_handler import process_pdfs_in_folder, split_text_into_chunks
-from src.vectorstore import VectorStoreManager
+from src.vectorstore_manager import vector_store_instance as vector_store
 from langchain.schema import Document
 
 # Configure logging
@@ -9,16 +9,6 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 def train_on_documents(data_folder):
-    vector_store_path = Path("vectorstore/vectorstore.index")
-    doc_mapping_path = Path("vectorstore/doc_mapping.pkl")
-    dimension = 384  # Ensure consistency with vectorstore.py
-
-    vector_store = VectorStoreManager(
-        vector_store_path=vector_store_path,
-        doc_mapping_path=doc_mapping_path,
-        dimension=dimension
-    )
-    vector_store.initialize()
 
     documents = []
 

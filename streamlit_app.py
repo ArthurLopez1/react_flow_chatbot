@@ -3,8 +3,7 @@ from pathlib import Path
 import logging
 from azure.storage.blob import BlobServiceClient, ContainerClient
 from settings import Config
-from src.vectorstore import VectorStoreManager
-from src.training import train_on_documents
+from src.vectorstore_manager import vector_store_instance as vec
 from src.llm_models import LLM
 from src.react_workflow import run_simple_workflow
 import base64
@@ -39,9 +38,6 @@ logger = logging.getLogger(__name__)
 
 # Initialize the configuration
 config = Config()
-
-# Initialize the vector store manager
-vec = VectorStoreManager()
 
 def download_vector_store():
     account_name = st.secrets["azure"]["account_name"]
