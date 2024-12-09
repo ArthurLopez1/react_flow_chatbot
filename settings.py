@@ -1,6 +1,6 @@
 import os
 import logging
-import streamlit as st
+import streamlit as st  # Add this import
 
 class Config:
     def __init__(self):
@@ -18,7 +18,7 @@ class Config:
         # Azure configurations
         self.AZURE_STORAGE_ACCOUNT = secrets["azure"].get("account_name")
         self.AZURE_CONTAINER_NAME = secrets["azure"].get("container_name")
-        self.AZURE_SAS_TOKEN = secrets["azure"].get("sas_token")
+        self.AZURE_SAS_TOKEN = st.secrets["azure"]["sas_token"]
         
         # Set default paths
         self.DATA_PATH = os.path.join("..", "data")

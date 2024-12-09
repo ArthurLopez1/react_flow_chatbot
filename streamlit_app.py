@@ -99,7 +99,7 @@ def get_image_as_base64(image_path):
 
 def load_css():
     css_path = Path(__file__).parent / "frontend" / "style.css"
-    if css_path.exists():
+    if (css_path.exists()):
         with open(css_path) as css_file:
             st.markdown(f"<style>{css_file.read()}</style>", unsafe_allow_html=True)
     else:
