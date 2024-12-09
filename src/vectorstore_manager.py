@@ -19,16 +19,13 @@ class VectorStoreSingleton:
     def __new__(cls):
         if cls._instance is None:
             config = Config()
-            try:
-                cls._instance = VectorStoreManager(
-                    vector_store_path=Path(config.VECTOR_STORE_PATH) / "vectorstore.index",
-                    doc_mapping_path=Path(config.VECTOR_STORE_PATH) / "doc_mapping.pkl"
-                )
-                cls._instance.initialize()
-                logger.info("VectorStoreManager singleton instance created and initialized.")
-            except Exception as e:
-                logger.error(f"Failed to initialize VectorStoreManager singleton: {e}")
-                raise
+            cls._instance = super(VectorStoreSingleton, cls).__new__(cls)
+            cls._instance.vector_store_path = Path(config.VECTOR_STORE_PATH) / "vectorstore.index"
+            cls._instance.doc_mapping_path = Path(config.VECTOR_STORE_PATH) / "doc_mapping.pkl"
+            cls._instance.index = None
+            cls._instance.doc_mapping = {}
+            cls._instance.logger = logging.getLogger(__name__)
+            logging.basicConfig(level=logging.INFO)
         return cls._instance
 
 # singleton instance

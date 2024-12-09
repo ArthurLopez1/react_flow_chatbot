@@ -23,7 +23,7 @@ class Config:
         # Set default paths
         self.DATA_PATH = os.path.join("..", "data")
         self.MODEL_PATH = os.getenv("MODEL_PATH", "path/to/model")
-        self.VECTOR_STORE_PATH = os.getenv("VECTOR_STORE_PATH")
+        self.VECTOR_STORE_PATH = "vectorstore"  # Ensure this attribute is defined
         
         # Set other configurations
         self.MAX_RETRIES = int(os.getenv("MAX_RETRIES", 3))
