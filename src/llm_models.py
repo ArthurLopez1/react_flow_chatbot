@@ -13,6 +13,9 @@ load_dotenv()
 MODEL_NAME = os.getenv("LLM_MODEL_NAME", "llama3.2:1b-instruct-fp16")  
 TEMPERATURE = float(os.getenv("LLM_TEMPERATURE", 0))
 FORMAT = os.getenv("LLM_FORMAT", None)
+LLM_HOST = os.getenv("LLM_HOST", "localhost")
+LLM_PORT = int(os.getenv("LLM_PORT", 11434))
+BASE_URL = f"http://{LLM_HOST}:{LLM_PORT}"
 
 class LLM:
     _instance = None
@@ -33,10 +36,21 @@ class LLM:
     def _initialize(self, format):
         try:
             if format:
-                self.llm = ChatOllama(model=MODEL_NAME, temperature=TEMPERATURE, format=format)
+                self.llm = ChatOllama(
+                    model=MODEL_NAME,
+                    temperature=TEMPERATURE,
+                    format=format,
+                    base_url=BASE_URL
+                )
             else:
-                self.llm = ChatOllama(model=MODEL_NAME, temperature=TEMPERATURE)
-            logger.info(f"Initialized LLM with model: {MODEL_NAME}, temperature: {TEMPERATURE}, format: {format}")
+                self.llm = ChatOllama(
+                    model=MODEL_NAME,
+                    temperature=TEMPERATURE,
+                    base_url=BASE_URL
+                )
+            logger.info(
+                f"Initialized LLM with model: {MODEL_NAME}, temperature: {TEMPERATURE}, format: {format}, base_url: {BASE_URL}"
+            )
         except Exception as e:
             logger.error(f"Failed to initialize LLM: {e}", exc_info=True)
             raise
