@@ -28,5 +28,16 @@ class VectorStoreSingleton:
             logging.basicConfig(level=logging.INFO)
         return cls._instance
 
-# singleton instance
+def initialize(self):
+        """
+        Initialize the vector store by delegating to VectorStoreManager.
+        """
+        try:
+            self.vector_store_manager.initialize()
+            self.logger.info("Vector store initialized successfully.")
+        except Exception as e:
+            self.logger.error(f"Failed to initialize vector store: {e}")
+            raise
+
+# Singleton instance
 vector_store_instance = VectorStoreSingleton()
