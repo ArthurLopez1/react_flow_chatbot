@@ -1,9 +1,8 @@
 import logging
 from pathlib import Path
 import sys
-sys.path.append(str(Path(__file__).resolve().parent.parent))
 from settings import Config
-from vectorstore import VectorStoreManager
+from .vectorstore import VectorStoreManager
 import threading
 
 # Configure logging

@@ -1,6 +1,6 @@
 import os
 import logging
-from dotenv import load_dotenv
+import streamlit as st
 
 class Config:
     def __init__(self):
@@ -8,16 +8,22 @@ class Config:
         self.logger = logging.getLogger(__name__)
         self.logger.info("Loading environment variables.")
         
-        load_dotenv()
+        # Load Streamlit secrets
+        secrets = st.secrets
         
         # Load environment variables
-        self.TAVILY_API_KEY = os.getenv("TAVILY_API_KEY")
-        self.LANGCHAIN_API_KEY = os.getenv("LANGCHAIN_API_KEY")
+        self.TAVILY_API_KEY = secrets.get("TAVILY_API_KEY")
+        self.LANGCHAIN_API_KEY = secrets.get("LANGCHAIN_API_KEY")
+        
+        # Azure configurations
+        self.AZURE_STORAGE_ACCOUNT = secrets["azure"].get("account_name")
+        self.AZURE_CONTAINER_NAME = secrets["azure"].get("container_name")
+        self.AZURE_SAS_TOKEN = secrets["azure"].get("sas_token")
         
         # Set default paths
         self.DATA_PATH = os.path.join("..", "data")
         self.MODEL_PATH = os.getenv("MODEL_PATH", "path/to/model")
-        self.VECTOR_STORE_PATH = os.getenv("VECTOR_STORE_PATH", "path/to/vectorstore")
+        self.VECTOR_STORE_PATH = os.getenv("VECTOR_STORE_PATH")
         
         # Set other configurations
         self.MAX_RETRIES = int(os.getenv("MAX_RETRIES", 3))
@@ -38,7 +44,7 @@ class Config:
 
     def _check_env_vars(self):
         """Check for required environment variables and raise an error if any are missing."""
-        required_vars = ["TAVILY_API_KEY", "LANGCHAIN_API_KEY"]
+        required_vars = ["TAVILY_API_KEY", "LANGCHAIN_API_KEY", "AZURE_SAS_TOKEN", "AZURE_STORAGE_ACCOUNT", "AZURE_CONTAINER_NAME"]
         for var in required_vars:
             if getattr(self, var) is None:
                 self.logger.error(f"Missing required environment variable: {var}")
@@ -49,3 +55,4 @@ if __name__ == "__main__":
     config = Config()
     print(f"TAVILY_API_KEY: {config.TAVILY_API_KEY}")
     print(f"LANGCHAIN_API_KEY: {config.LANGCHAIN_API_KEY}")
+    print(f"AZURE_SAS_TOKEN: {config.AZURE_SAS_TOKEN}")
