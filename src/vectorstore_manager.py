@@ -2,7 +2,7 @@ import logging
 from pathlib import Path
 import sys
 from settings import Config
-from .vectorstore import VectorStoreManager
+from src.vectorstore import VectorStoreManager
 import threading
 
 # Configure logging
