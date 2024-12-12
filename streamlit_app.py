@@ -8,7 +8,6 @@ from src.llm_models import LLM
 from src.react_workflow import run_simple_workflow
 import base64
 
-
 # Custom CSS to style the send button and sidebar
 st.markdown(
     """
@@ -25,8 +24,6 @@ st.markdown(
         background-color: #f0f0f0;
         border-radius: 5px;
     }
-
-
     </style>
     """,
     unsafe_allow_html=True
@@ -39,6 +36,7 @@ logger = logging.getLogger(__name__)
 # Initialize the configuration
 config = Config()
 
+@st.cache_resource
 def download_vector_store():
     account_name = st.secrets["azure"]["account_name"]
     container_name = st.secrets["azure"]["container_name"]
@@ -46,7 +44,7 @@ def download_vector_store():
 
     try:
         blob_service_client = BlobServiceClient(
-            account_url = f"https://{account_name}.blob.core.windows.net",
+            account_url=f"https://{account_name}.blob.core.windows.net",
             credential=sas_token
         )
         container_client = blob_service_client.get_container_client(container_name)
@@ -71,13 +69,19 @@ def download_vector_store():
         st.error(f"Error downloading vector store: {e}")
         return False
 
-# Download the vector store
-if download_vector_store():
+@st.cache_data
+def initialize_vector_store():
     try:
         vec.initialize()
+        return True
     except Exception as init_error:
         logger.error(f"Failed to initialize vector store: {init_error}")
         st.error(f"Failed to initialize vector store: {init_error}")
+        return False
+
+# Download and initialize the vector store
+if download_vector_store():
+    if not initialize_vector_store():
         st.stop()
 else:
     st.stop()
@@ -99,7 +103,7 @@ def get_image_as_base64(image_path):
 
 def load_css():
     css_path = Path(__file__).parent / "frontend" / "style.css"
-    if (css_path.exists()):
+    if css_path.exists():
         with open(css_path) as css_file:
             st.markdown(f"<style>{css_file.read()}</style>", unsafe_allow_html=True)
     else:
@@ -163,7 +167,6 @@ if pdf_files:
 else:
     st.sidebar.info("No PDF files found in the data folder.")
 
-
 # Create columns for input and send button
 col1, col2 = st.columns([3, 1])  # Adjust the ratio as needed
 
@@ -185,16 +188,16 @@ if send_button:
             try:
                 # Pass a dictionary with the question
                 events = run_simple_workflow({"question": question})
-                
+
                 # Extract the final state from events
                 final_state = events[-1] if events else {}
                 generated_answer = final_state.get("generation", "No answer generated.")
-                
+
                 if "No documents found" in generated_answer or "Error generating answer" in generated_answer:
                     st.error(generated_answer)
                 else:
                     st.markdown(f'<div class="generated-answer">{generated_answer}</div>', unsafe_allow_html=True)
-                
+
                 logger.info(f"Generated answer: {generated_answer}")
                 print(f"Generated answer: {generated_answer}")  # Ensure final state is printed to console
             except Exception as e:
