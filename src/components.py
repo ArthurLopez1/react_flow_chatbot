@@ -1,4 +1,3 @@
-# src/components.py
 import os
 import json
 import logging
@@ -172,7 +171,7 @@ def generate(state: Dict[str, Any], config: Dict[str, Any]):
     documents = state["documents"]
     loop_step = state.get("loop_step", 0)
 
-    # RAG generation
+    # generation
     docs_txt = format_docs(documents)
     rag_prompt_formatted = rag_prompt.format(context=docs_txt, question=question)
     generation = llm.invoke([HumanMessage(content=rag_prompt_formatted)])

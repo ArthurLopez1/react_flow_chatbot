@@ -11,9 +11,7 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 import json
 import logging
 
-# ---------------------------
 # Constants and Configuration
-# ---------------------------
 
 logger = logging.getLogger(__name__)
 
@@ -36,9 +34,7 @@ logging.basicConfig(
     ]
 )
 
-# ---------------------------
 # Helper Functions
-# ---------------------------
 
 def clean_text(text):
     return re.sub(r'\s+', ' ', text).strip()
@@ -63,9 +59,7 @@ def save_metadata(metadata):
     with open(METADATA_FILE, 'w') as f:
         json.dump(metadata, f, indent=4)
 
-# ---------------------------
 # Parsing Functions
-# ---------------------------
 
 def parse_embedded_text(pdf_path):
     text_data = []
