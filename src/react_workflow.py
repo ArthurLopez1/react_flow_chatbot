@@ -76,8 +76,7 @@ def transform_documents(state: Dict[str, Any]):
         state["documents"] = []
         return state
 
-    # Proceed with filtering (optional)
-    # Example: Remove duplicates based on content similarity
+
     unique_documents = []
     seen = set()
     for doc, embedding in zip(documents, embeddings):

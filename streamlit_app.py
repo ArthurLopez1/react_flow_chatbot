@@ -1,7 +1,7 @@
 import streamlit as st
 from pathlib import Path
 import logging
-from azure.storage.blob import BlobServiceClient, ContainerClient
+# from azure.storage.blob import BlobServiceClient, ContainerClient  # Removed Azure imports
 from settings import Config
 from src.vectorstore_manager import vector_store_instance as vec
 from src.llm_models import LLM
@@ -38,36 +38,8 @@ config = Config()
 
 @st.cache_resource
 def download_vector_store():
-    account_name = st.secrets["azure"]["account_name"]
-    container_name = st.secrets["azure"]["container_name"]
-    sas_token = st.secrets["azure"]["sas_token"]
-
-    try:
-        blob_service_client = BlobServiceClient(
-            account_url=f"https://{account_name}.blob.core.windows.net",
-            credential=sas_token
-        )
-        container_client = blob_service_client.get_container_client(container_name)
-
-        vectorstore_dir = Path("vectorstore")
-        vectorstore_dir.mkdir(exist_ok=True)
-
-        blobs = container_client.list_blobs()
-
-        for blob in blobs:
-            blob_client = container_client.get_blob_client(blob)
-            download_path = vectorstore_dir / blob.name
-            with open(download_path, "wb") as file:
-                file.write(blob_client.download_blob().readall())
-            logger.info(f"Downloaded {blob.name} to {download_path}")
-
-        logger.info("All vector store files downloaded successfully.")
-        return True
-
-    except Exception as e:
-        logger.error(f"Error downloading vector store: {e}")
-        st.error(f"Error downloading vector store: {e}")
-        return False
+    local_path = Path("vectorstore/vector_store.index")
+    return local_path.exists()
 
 @st.cache_data
 def initialize_vector_store():

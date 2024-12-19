@@ -17,4 +17,3 @@ pytesseract
 camelot-py
 opencv-python-headless
 tavily-python
-azure-storage-blob
