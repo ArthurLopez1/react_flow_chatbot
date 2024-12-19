@@ -168,8 +168,6 @@ cython_debug/
 .dbeaver
 .project
 
-# pdf  files
-*.pdf
 
 # index files
 vector_store.index
@@ -177,7 +175,9 @@ vector_store.index
 
 *.pkl
 
-data/
+# documents used to train the model
+chunks/
+figures/
 
 # cleaned docs
 cleaned_docs/
@@ -189,6 +189,7 @@ pymupdf_parser.py
 split_test.ipynb
 split_test_2.ipynb
 
+# folder for "playground" code
 src/testers/
 
 vectorstore/
