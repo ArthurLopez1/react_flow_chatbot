@@ -1,9 +1,6 @@
 import logging
 from pathlib import Path
-import sys
-from settings import Config
 from src.vectorstore import VectorStoreManager
-import threading
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)

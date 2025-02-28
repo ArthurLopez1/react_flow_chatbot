@@ -1,15 +1,14 @@
 import os
 import re
-import pytesseract
 import pdfplumber
 from pdf2image import convert_from_path
-from PIL import Image
 import logging
 import camelot
 from typing import List, Dict, Any
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 import json
 import logging
+import pytesseract
 
 # Constants and Configuration
 

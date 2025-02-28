@@ -5,12 +5,10 @@ from typing import List, Dict, Any
 from typing_extensions import TypedDict
 from langchain_core.messages import HumanMessage, SystemMessage
 from langgraph.graph import StateGraph, END
-from .testers.file_handler_0 import load_document, split_document
 from .vectorstore import VectorStoreManager
 from .llm_models import LLM
 from langchain_community.tools.tavily_search import TavilySearchResults
 from langchain.schema import Document
-from IPython.display import Image, display
 
 # Prompt and instructions setup
 router_instructions = """You are an expert at Trafikverket (Swedish Transport Administration) and methereology.

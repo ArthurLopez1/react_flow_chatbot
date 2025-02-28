@@ -3,7 +3,6 @@ import logging
 from typing import List, Dict, Any
 from typing_extensions import TypedDict
 from pydantic import BaseModel, Field
-from langchain_core.output_parsers import StrOutputParser
 from langchain_core.output_parsers.openai_tools import PydanticToolsParser
 from langgraph.graph import StateGraph, END
 from src.vectorstore import VectorStoreManager

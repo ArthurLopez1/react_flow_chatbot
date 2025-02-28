@@ -17,3 +17,6 @@ pytesseract
 camelot-py
 opencv-python-headless
 tavily-python
+pytesseract
+ipykernel
+langchain-ollama

@@ -1,4 +1,3 @@
-import os
 import faiss
 faiss.omp_set_num_threads(1)
 import numpy as np
@@ -6,7 +5,6 @@ import pickle
 from typing import List, Tuple, Dict
 from sklearn.metrics.pairwise import cosine_similarity
 from sentence_transformers import SentenceTransformer  
-from langchain_experimental.llms.ollama_functions import OllamaFunctions
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain.schema import Document  # Add this import
 import logging

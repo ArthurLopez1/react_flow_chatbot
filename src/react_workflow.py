@@ -1,8 +1,6 @@
-from pathlib import Path
 import logging
 from typing import List, Dict, Any
 from typing_extensions import TypedDict
-from langchain_core.output_parsers import StrOutputParser
 from langgraph.graph import StateGraph, END
 from src.vectorstore import VectorStoreManager
 from src.llm_models import LLM
@@ -11,8 +9,7 @@ from langchain.prompts.chat import (
     ChatPromptTemplate,
     SystemMessagePromptTemplate,
     HumanMessagePromptTemplate,
-)
-from sklearn.metrics.pairwise import cosine_similarity  
+) 
 from langchain_core.runnables import RunnableSequence
 from src.vectorstore_manager import vector_store_instance as vector_store
 
